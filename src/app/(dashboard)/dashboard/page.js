@@ -5,12 +5,13 @@ import { Card } from '@/components/ui/card'
 import { StatsCard } from '@/components/dashboard/stats-card'
 import { colors } from '@/styles/colors'
 import SearchHistory from '@/components/dashboard/search-history'
+import Card3 from '@/components/ui/Card3D'
 
 export default function Dashboard() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       {/* ATM Card Section */}
-      <Box sx={{ mb: 4 }}>
+      {/* <Box sx={{ mb: 4 }}>
         <Card variant="gradient">
           <Box sx={{ position: 'relative', zIndex: 1 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4 }}>
@@ -19,14 +20,14 @@ export default function Dashboard() {
                   3808 0103 1645 533
                 </Typography>
               </Box>
-              <Box 
-                component="img" 
-                src="/bri-logo.png" 
-                alt="BRI Logo" 
-                sx={{ 
+              <Box
+                component="img"
+                src="/bri-logo.png"
+                alt="BRI Logo"
+                sx={{
                   width: 60,
                   filter: 'brightness(0) invert(1)'
-                }} 
+                }}
               />
             </Box>
             <Box sx={{ mb: 3 }}>
@@ -38,33 +39,34 @@ export default function Dashboard() {
                 <Typography variant="body2" sx={{ opacity: 0.8 }}>Expires</Typography>
                 <Typography>11/22</Typography>
               </Box>
-              <Box 
-                component="img" 
-                src="/chip.png" 
-                alt="Chip" 
-                sx={{ 
+              <Box
+                component="img"
+                src="/chip.png"
+                alt="Chip"
+                sx={{
                   width: 50,
                   filter: 'brightness(0) invert(1)'
-                }} 
+                }}
               />
             </Box>
           </Box>
         </Card>
-      </Box>
+      </Box> */}
+      <Card3 />
 
       {/* Stats Cards */}
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 3 }}>
-        <StatsCard 
+        <StatsCard
           title="Uang Kas"
           value="Rp 2.000.000"
           trend="up"
         />
-        <StatsCard 
+        <StatsCard
           title="Total Uang Masuk"
           value="Rp 500.000"
           trend="up"
         />
-        <StatsCard 
+        <StatsCard
           title="Total Uang Keluar"
           value="Rp 300.000"
           trend="down"
