@@ -1,4 +1,4 @@
-'use client'
+ 'use client'
 
 import { Box, Typography } from '@mui/material'
 import { Card } from '@/components/ui/card'

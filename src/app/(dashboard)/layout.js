@@ -1,17 +1,14 @@
 'use client'
 
-import { AppBar, Drawer, IconButton, List, ListItem, ListItemIcon, ListItemText, Toolbar, Typography, Box, InputBase } from '@mui/material'
+import { AppBar, Drawer, IconButton, List, ListItem, ListItemIcon, ListItemText, Toolbar, Typography, Box } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
 import PaymentsIcon from '@mui/icons-material/Payments'
 import ReceiptIcon from '@mui/icons-material/Receipt'
 import AssessmentIcon from '@mui/icons-material/Assessment'
-import PeopleIcon from '@mui/icons-material/People'
 import LogoutIcon from '@mui/icons-material/Logout'
-import SearchIcon from '@mui/icons-material/Search'
 import SettingsIcon from '@mui/icons-material/Settings'
-import NotificationsIcon from '@mui/icons-material/Notifications'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -192,25 +189,6 @@ export default function DashboardLayout({ children }) {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <IconButton sx={{ color: colors.text.secondary }}>
               <SettingsIcon />
-            </IconButton>
-            <IconButton 
-              sx={{ 
-                color: colors.text.secondary,
-                position: 'relative'
-              }}
-            >
-              <NotificationsIcon />
-              <Box 
-                sx={{ 
-                  position: 'absolute',
-                  top: 4,
-                  right: 4,
-                  width: 8,
-                  height: 8,
-                  bgcolor: colors.success.main,
-                  borderRadius: '50%'
-                }} 
-              />
             </IconButton>
             <Box 
               sx={{ 
