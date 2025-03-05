@@ -1,6 +1,6 @@
 'use client'
 
-import { AppBar, Drawer, IconButton, List, ListItem, ListItemIcon, ListItemText, Toolbar, Typography, Box } from '@mui/material'
+import { AppBar, Drawer, IconButton, List, ListItem, ListItemIcon, ListItemText, Toolbar, Typography, Box, Menu, MenuItem, Divider } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
@@ -9,11 +9,18 @@ import ReceiptIcon from '@mui/icons-material/Receipt'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import LogoutIcon from '@mui/icons-material/Logout'
 import SettingsIcon from '@mui/icons-material/Settings'
+import PersonIcon from '@mui/icons-material/Person'
+import PaletteIcon from '@mui/icons-material/Palette'
+import NotificationsIcon from '@mui/icons-material/Notifications'
+import SecurityIcon from '@mui/icons-material/Security'
+import DarkModeIcon from '@mui/icons-material/DarkMode'
+import LightModeIcon from '@mui/icons-material/LightMode'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useSoftUIController, setMiniSidenav } from '@/context'
 import { colors, shadows } from '@/styles/colors'
+import { useState } from 'react'
 
 const menuItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
@@ -27,9 +34,33 @@ export default function DashboardLayout({ children }) {
   const [controller, dispatch] = useSoftUIController()
   const { miniSidenav } = controller
   const pathname = usePathname()
+  const [anchorEl, setAnchorEl] = useState(null)
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedMode = localStorage.getItem('darkMode')
+      return savedMode ? JSON.parse(savedMode) : false
+    }
+    return false
+  })
+  const open = Boolean(anchorEl)
 
   const handleDrawerToggle = () => {
     setMiniSidenav(dispatch, !miniSidenav)
+  }
+
+  const handleClick = (event) => {
+    setAnchorEl(event.currentTarget)
+  }
+
+  const handleClose = () => {
+    setAnchorEl(null)
+  }
+
+  const toggleDarkMode = () => {
+    const newMode = !darkMode
+    setDarkMode(newMode)
+    localStorage.setItem('darkMode', JSON.stringify(newMode))
+    handleClose()
   }
 
   const drawer = (
@@ -54,21 +85,20 @@ export default function DashboardLayout({ children }) {
               variant="h6" 
               sx={{ 
                 fontWeight: 'bold',
-                color: colors.primary.main,
+                color: darkMode ? '#fff' : colors.primary.main,
                 fontSize: '1.25rem',
                 lineHeight: '1.2'
               }}
             >
-              COCONUT
+
             </Typography>
             <Typography 
               variant="caption"
               sx={{
-                color: colors.text.secondary,
+                color: darkMode ? '#fff' : colors.text.secondary,
                 display: 'block'
               }}
             >
-              computer club
             </Typography>
           </Box>
         </Box>
@@ -78,7 +108,7 @@ export default function DashboardLayout({ children }) {
         <Typography 
           variant="body2" 
           sx={{ 
-            color: colors.text.secondary,
+            color: darkMode ? '#fff' : colors.text.secondary,
             fontWeight: 500,
             mb: 1
           }}
@@ -98,21 +128,22 @@ export default function DashboardLayout({ children }) {
               borderRadius: '12px',
               mb: 1,
               py: 1,
+              color: darkMode ? '#fff' : 'inherit',
               '&.Mui-selected': {
-                bgcolor: colors.primary.light,
-                color: colors.primary.main,
+                bgcolor: darkMode ? 'rgba(255, 255, 255, 0.1)' : colors.primary.light,
+                color: darkMode ? '#fff' : colors.primary.main,
                 '& .MuiListItemIcon-root': {
-                  color: colors.primary.main,
+                  color: darkMode ? '#fff' : colors.primary.main,
                 },
               },
               '&:hover': {
-                bgcolor: `${colors.primary.light}80`,
+                bgcolor: darkMode ? 'rgba(255, 255, 255, 0.05)' : `${colors.primary.light}80`,
               },
             }}
           >
             <ListItemIcon sx={{ 
               minWidth: 40,
-              color: pathname === item.path ? colors.primary.main : colors.text.secondary 
+              color: darkMode ? '#fff' : (pathname === item.path ? colors.primary.main : colors.text.secondary)
             }}>
               {item.icon}
             </ListItemIcon>
@@ -121,6 +152,7 @@ export default function DashboardLayout({ children }) {
               sx={{
                 '& .MuiTypography-root': {
                   fontWeight: pathname === item.path ? 600 : 400,
+                  color: darkMode ? '#fff' : 'inherit',
                 }
               }}
             />
@@ -135,9 +167,9 @@ export default function DashboardLayout({ children }) {
           sx={{
             borderRadius: '12px',
             py: 1,
-            color: colors.text.secondary,
+            color: darkMode ? '#fff' : colors.text.secondary,
             '&:hover': {
-              bgcolor: `${colors.primary.light}20`,
+              bgcolor: darkMode ? 'rgba(255, 255, 255, 0.05)' : `${colors.primary.light}20`,
             },
           }}
         >
@@ -151,19 +183,40 @@ export default function DashboardLayout({ children }) {
   )
 
   return (
-    <Box sx={{ display: 'flex', bgcolor: '#F8F9FA', minHeight: '100vh' }}>
+    <Box sx={{ 
+      display: 'flex', 
+      bgcolor: darkMode ? '#1a1a1a' : '#F8F9FA', 
+      minHeight: '100vh',
+      color: darkMode ? '#fff' : colors.text.primary,
+    }}>
       <AppBar
         position="fixed"
         sx={{
-          width: { sm: `calc(100% - ${miniSidenav ? '80px' : '280px'})` },
-          ml: { sm: miniSidenav ? '80px' : '280px' },
-          bgcolor: 'rgba(255, 255, 255, 0.8)',
+          width: { 
+            xs: '100%',
+            sm: `calc(100% - ${miniSidenav ? '80px' : '280px'})`
+          },
+          ml: { 
+            xs: 0,
+            sm: miniSidenav ? '80px' : '280px'
+          },
+          bgcolor: darkMode ? 'rgba(26, 26, 26, 0.8)' : 'rgba(255, 255, 255, 0.8)',
           backdropFilter: 'blur(6px)',
-          color: colors.text.primary,
+          color: darkMode ? '#fff' : colors.text.primary,
           boxShadow: 'none',
+          '& .MuiIconButton-root': {
+            color: darkMode ? '#fff' : colors.text.secondary,
+          },
+          transition: theme => theme.transitions.create(['margin', 'width', 'background-color', 'color'], {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.leavingScreen,
+          }),
         }}
       >
-        <Toolbar sx={{ minHeight: '80px !important' }}>
+        <Toolbar sx={{ 
+          minHeight: { xs: '64px !important', sm: '80px !important' },
+          px: { xs: 2, sm: 3 }
+        }}>
           <IconButton
             color="inherit"
             aria-label="open drawer"
@@ -178,7 +231,7 @@ export default function DashboardLayout({ children }) {
             variant="h6" 
             sx={{ 
               fontWeight: 600,
-              color: colors.text.primary
+              color: darkMode ? '#fff' : colors.text.primary
             }}
           >
             {menuItems.find(item => item.path === pathname)?.text || 'Dashboard'}
@@ -187,9 +240,43 @@ export default function DashboardLayout({ children }) {
           <Box sx={{ flexGrow: 1 }} />
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <IconButton sx={{ color: colors.text.secondary }}>
+            <IconButton 
+              onClick={handleClick}
+              sx={{ color: 'inherit' }}
+              aria-controls={open ? 'settings-menu' : undefined}
+              aria-haspopup="true"
+              aria-expanded={open ? 'true' : undefined}
+            >
               <SettingsIcon />
             </IconButton>
+            <Menu
+              id="settings-menu"
+              anchorEl={anchorEl}
+              open={open}
+              onClose={handleClose}
+              MenuListProps={{
+                'aria-labelledby': 'settings-button',
+              }}
+              sx={{
+                '& .MuiPaper-root': {
+                  borderRadius: '12px',
+                  minWidth: '200px',
+                  boxShadow: shadows.card,
+                  bgcolor: darkMode ? '#1a1a1a' : 'white',
+                  color: darkMode ? '#fff' : 'inherit',
+                  '& .MuiListItemIcon-root': {
+                    color: darkMode ? '#fff' : 'inherit',
+                  },
+                }
+              }}
+            >
+              <MenuItem onClick={toggleDarkMode}>
+                <ListItemIcon>
+                  {darkMode ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+                </ListItemIcon>
+                <ListItemText>{darkMode ? 'Light Mode' : 'Dark Mode'}</ListItemText>
+              </MenuItem>
+            </Menu>
             <Box 
               sx={{ 
                 width: 36,
@@ -221,10 +308,18 @@ export default function DashboardLayout({ children }) {
           display: { xs: 'block', sm: 'none' },
           '& .MuiDrawer-paper': { 
             boxSizing: 'border-box', 
-            width: '280px',
-            bgcolor: 'white',
+            width: { xs: '240px', sm: '280px' },
+            bgcolor: darkMode ? '#1a1a1a' : 'white',
             borderRight: 'none',
-            boxShadow: shadows.card
+            boxShadow: shadows.card,
+            color: darkMode ? '#fff' : colors.text.primary,
+            '& .MuiListItemIcon-root': {
+              color: darkMode ? '#fff' : colors.text.secondary,
+            },
+            transition: theme => theme.transitions.create(['background-color', 'color'], {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.enteringScreen,
+            }),
           },
         }}
       >
@@ -237,10 +332,18 @@ export default function DashboardLayout({ children }) {
           display: { xs: 'none', sm: 'block' },
           '& .MuiDrawer-paper': { 
             boxSizing: 'border-box', 
-            width: '280px',
-            bgcolor: 'white',
+            width: miniSidenav ? '80px' : '280px',
+            bgcolor: darkMode ? '#1a1a1a' : 'white',
             borderRight: 'none',
-            boxShadow: shadows.card
+            boxShadow: shadows.card,
+            color: darkMode ? '#fff' : colors.text.primary,
+            '& .MuiListItemIcon-root': {
+              color: darkMode ? '#fff' : colors.text.secondary,
+            },
+            transition: theme => theme.transitions.create(['width', 'background-color', 'color'], {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.enteringScreen,
+            }),
           },
         }}
         open
@@ -250,10 +353,14 @@ export default function DashboardLayout({ children }) {
 
       <Box sx={{ 
         flexGrow: 1, 
-        p: 3,
+        p: { xs: 2, sm: 3 },
         mt: '80px',
-        ml: { sm: '280px' },
-        transition: 'margin-left 0.2s ease-in-out'
+        ml: { xs: 0, sm: miniSidenav ? '80px' : '280px' },
+        width: { xs: '100%', sm: `calc(100% - ${miniSidenav ? '80px' : '280px'})` },
+        transition: theme => theme.transitions.create(['margin', 'width'], {
+          easing: theme.transitions.easing.sharp,
+          duration: theme.transitions.duration.leavingScreen,
+        }),
       }}>
         {children}
       </Box>
