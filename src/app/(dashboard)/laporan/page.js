@@ -15,10 +15,6 @@ import {
   Paper,
   Menu,
   MenuItem,
-  ListItemIcon,
-  ListItemText,
-  IconButton,
-  Tooltip,
   Container
 } from '@mui/material'
 import { 
@@ -26,10 +22,8 @@ import {
   Print as PrintIcon,
   PictureAsPdf as PdfIcon,
   TableView as ExcelIcon,
-  FilterList as FilterIcon,
-  Share as ShareIcon
 } from '@mui/icons-material'
-import { colors, shadows } from '@/styles/colors'
+import { colors } from '@/styles/colors'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 import * as XLSX from 'xlsx'
@@ -58,19 +52,27 @@ export default function LaporanKeuangan() {
   const formatRupiah = (number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
-      currency: 'IDR'
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(number)
   }
 
   // Fungsi untuk generate PDF
   const generatePDF = () => {
-    const doc = new jsPDF()
+    const doc = new jsPDF('l', 'mm', 'a4') // Landscape orientation
     
     // Judul
     doc.setFontSize(16)
     doc.text('Laporan Keuangan Desa', 14, 15)
     doc.setFontSize(12)
     doc.text('Periode: Januari 2024', 14, 25)
+
+    // Ringkasan
+    doc.setFontSize(12)
+    doc.text(`Total Pemasukan: ${formatRupiah(totalPemasukan)}`, 14, 35)
+    doc.text(`Total Pengeluaran: ${formatRupiah(totalPengeluaran)}`, 14, 42)
+    doc.text(`Saldo Akhir: ${formatRupiah(saldoAkhir)}`, 14, 49)
     
     // Tabel
     doc.autoTable({
@@ -82,9 +84,24 @@ export default function LaporanKeuangan() {
         formatRupiah(row.kredit),
         formatRupiah(row.saldo)
       ]),
-      startY: 35,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [63, 81, 181] }
+      startY: 60,
+      styles: { 
+        fontSize: 10,
+        cellPadding: 2
+      },
+      columnStyles: {
+        0: { cellWidth: 25 },
+        1: { cellWidth: 60 },
+        2: { cellWidth: 40, halign: 'right' },
+        3: { cellWidth: 40, halign: 'right' },
+        4: { cellWidth: 40, halign: 'right' }
+      },
+      headStyles: { 
+        fillColor: [63, 81, 181],
+        textColor: 255,
+        fontSize: 10,
+        fontStyle: 'bold'
+      }
     })
     
     doc.save('laporan-keuangan.pdf')
@@ -93,13 +110,38 @@ export default function LaporanKeuangan() {
 
   // Fungsi untuk print
   const handlePrint = () => {
+    const printContent = document.getElementById('print-content')
+    const originalContents = document.body.innerHTML
+    
+    document.body.innerHTML = printContent.innerHTML
+    
     window.print()
+    
+    document.body.innerHTML = originalContents
     handleClose()
+    window.location.reload() // Reload halaman setelah print
   }
 
   // Fungsi untuk export Excel
   const exportToExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(dummyData)
+    const ws = XLSX.utils.json_to_sheet(dummyData.map(row => ({
+      Tanggal: row.tanggal,
+      Keterangan: row.keterangan,
+      Debit: row.debit,
+      Kredit: row.kredit,
+      Saldo: row.saldo
+    })))
+    
+    // Set lebar kolom
+    const colWidths = [
+      { wch: 12 }, // Tanggal
+      { wch: 30 }, // Keterangan
+      { wch: 15 }, // Debit
+      { wch: 15 }, // Kredit
+      { wch: 15 }  // Saldo
+    ]
+    ws['!cols'] = colWidths
+    
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Laporan Keuangan')
     XLSX.writeFile(wb, 'laporan-keuangan.xlsx')
@@ -113,81 +155,85 @@ export default function LaporanKeuangan() {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" gutterBottom>
-          Laporan Keuangan
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<FileDownloadIcon />}
-          onClick={handleClick}
-        >
-          Unduh Laporan
-        </Button>
-        <Menu
-          anchorEl={anchorEl}
-          open={open}
-          onClose={handleClose}
-        >
-          <MenuItem onClick={generatePDF}>
-            <PdfIcon sx={{ mr: 1 }} /> Unduh PDF
-          </MenuItem>
-          <MenuItem onClick={exportToExcel}>
-            <ExcelIcon sx={{ mr: 1 }} /> Unduh Excel
-          </MenuItem>
-          <MenuItem onClick={handlePrint}>
-            <PrintIcon sx={{ mr: 1 }} /> Cetak
-          </MenuItem>
-        </Menu>
-      </Box>
+      <div id="print-content">
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+          <Typography variant="h4" gutterBottom>
+            Laporan Keuangan
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<FileDownloadIcon />}
+            onClick={handleClick}
+            sx={{ '@media print': { display: 'none' } }}
+          >
+            Unduh Laporan
+          </Button>
+          <Menu
+            anchorEl={anchorEl}
+            open={open}
+            onClose={handleClose}
+            sx={{ '@media print': { display: 'none' } }}
+          >
+            <MenuItem onClick={generatePDF}>
+              <PdfIcon sx={{ mr: 1 }} /> Unduh PDF
+            </MenuItem>
+            <MenuItem onClick={exportToExcel}>
+              <ExcelIcon sx={{ mr: 1 }} /> Unduh Excel
+            </MenuItem>
+            <MenuItem onClick={handlePrint}>
+              <PrintIcon sx={{ mr: 1 }} /> Cetak
+            </MenuItem>
+          </Menu>
+        </Box>
 
-      {/* Kartu ringkasan */}
-      <Box display="flex" gap={2} mb={3}>
-        <Card sx={{ flex: 1, p: 2 }}>
-          <Typography variant="h6" gutterBottom>Total Pemasukan</Typography>
-          <Typography variant="h4" color="success.main">
-            {formatRupiah(totalPemasukan)}
-          </Typography>
-        </Card>
-        <Card sx={{ flex: 1, p: 2 }}>
-          <Typography variant="h6" gutterBottom>Total Pengeluaran</Typography>
-          <Typography variant="h4" color="error.main">
-            {formatRupiah(totalPengeluaran)}
-          </Typography>
-        </Card>
-        <Card sx={{ flex: 1, p: 2 }}>
-          <Typography variant="h6" gutterBottom>Saldo Akhir</Typography>
-          <Typography variant="h4" color="primary.main">
-            {formatRupiah(saldoAkhir)}
-          </Typography>
-        </Card>
-      </Box>
+        {/* Kartu ringkasan */}
+        <Box display="flex" gap={2} mb={3}>
+          <Card sx={{ flex: 1, p: 2 }}>
+            <Typography variant="h6" gutterBottom>Total Pemasukan</Typography>
+            <Typography variant="h5" color="success.main">
+              {formatRupiah(totalPemasukan)}
+            </Typography>
+          </Card>
+          <Card sx={{ flex: 1, p: 2 }}>
+            <Typography variant="h6" gutterBottom>Total Pengeluaran</Typography>
+            <Typography variant="h5" color="error.main">
+              {formatRupiah(totalPengeluaran)}
+            </Typography>
+          </Card>
+          <Card sx={{ flex: 1, p: 2 }}>
+            <Typography variant="h6" gutterBottom>Saldo Akhir</Typography>
+            <Typography variant="h5" color="primary.main">
+              {formatRupiah(saldoAkhir)}
+            </Typography>
+          </Card>
+        </Box>
 
-      {/* Tabel transaksi */}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Tanggal</TableCell>
-              <TableCell>Keterangan</TableCell>
-              <TableCell align="right">Debit</TableCell>
-              <TableCell align="right">Kredit</TableCell>
-              <TableCell align="right">Saldo</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {dummyData.map((row, index) => (
-              <TableRow key={index}>
-                <TableCell>{row.tanggal}</TableCell>
-                <TableCell>{row.keterangan}</TableCell>
-                <TableCell align="right">{formatRupiah(row.debit)}</TableCell>
-                <TableCell align="right">{formatRupiah(row.kredit)}</TableCell>
-                <TableCell align="right">{formatRupiah(row.saldo)}</TableCell>
+        {/* Tabel transaksi */}
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Tanggal</TableCell>
+                <TableCell>Keterangan</TableCell>
+                <TableCell align="right">Debit</TableCell>
+                <TableCell align="right">Kredit</TableCell>
+                <TableCell align="right">Saldo</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {dummyData.map((row, index) => (
+                <TableRow key={index}>
+                  <TableCell>{row.tanggal}</TableCell>
+                  <TableCell>{row.keterangan}</TableCell>
+                  <TableCell align="right">{formatRupiah(row.debit)}</TableCell>
+                  <TableCell align="right">{formatRupiah(row.kredit)}</TableCell>
+                  <TableCell align="right">{formatRupiah(row.saldo)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </div>
     </Container>
   )
 } 
