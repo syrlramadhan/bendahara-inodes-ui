@@ -24,8 +24,8 @@ import {
   TableView as ExcelIcon,
 } from '@mui/icons-material'
 import { colors } from '@/styles/colors'
-import { jsPDF } from 'jspdf'
-import 'jspdf-autotable'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 
 // Data dummy untuk contoh
@@ -60,52 +60,61 @@ export default function LaporanKeuangan() {
 
   // Fungsi untuk generate PDF
   const generatePDF = () => {
-    const doc = new jsPDF('l', 'mm', 'a4') // Landscape orientation
-    
-    // Judul
-    doc.setFontSize(16)
-    doc.text('Laporan Keuangan Desa', 14, 15)
-    doc.setFontSize(12)
-    doc.text('Periode: Januari 2024', 14, 25)
+    try {
+      const doc = new jsPDF('l', 'mm', 'a4') // Landscape orientation
+      
+      // Judul
+      doc.setFontSize(16)
+      doc.text('Laporan Keuangan Desa', 14, 15)
+      doc.setFontSize(12)
+      doc.text('Periode: Januari 2024', 14, 25)
 
-    // Ringkasan
-    doc.setFontSize(12)
-    doc.text(`Total Pemasukan: ${formatRupiah(totalPemasukan)}`, 14, 35)
-    doc.text(`Total Pengeluaran: ${formatRupiah(totalPengeluaran)}`, 14, 42)
-    doc.text(`Saldo Akhir: ${formatRupiah(saldoAkhir)}`, 14, 49)
-    
-    // Tabel
-    doc.autoTable({
-      head: [['Tanggal', 'Keterangan', 'Debit', 'Kredit', 'Saldo']],
-      body: dummyData.map(row => [
+      // Ringkasan
+      doc.setFontSize(12)
+      doc.text(`Total Pemasukan: ${formatRupiah(totalPemasukan)}`, 14, 35)
+      doc.text(`Total Pengeluaran: ${formatRupiah(totalPengeluaran)}`, 14, 42)
+      doc.text(`Saldo Akhir: ${formatRupiah(saldoAkhir)}`, 14, 49)
+      
+      // Tabel
+      const tableData = dummyData.map(row => [
         row.tanggal,
         row.keterangan,
         formatRupiah(row.debit),
         formatRupiah(row.kredit),
         formatRupiah(row.saldo)
-      ]),
-      startY: 60,
-      styles: { 
-        fontSize: 10,
-        cellPadding: 2
-      },
-      columnStyles: {
-        0: { cellWidth: 25 },
-        1: { cellWidth: 60 },
-        2: { cellWidth: 40, halign: 'right' },
-        3: { cellWidth: 40, halign: 'right' },
-        4: { cellWidth: 40, halign: 'right' }
-      },
-      headStyles: { 
-        fillColor: [63, 81, 181],
-        textColor: 255,
-        fontSize: 10,
-        fontStyle: 'bold'
-      }
-    })
-    
-    doc.save('laporan-keuangan.pdf')
-    handleClose()
+      ])
+
+      const tableColumns = ['Tanggal', 'Keterangan', 'Debit', 'Kredit', 'Saldo']
+
+      autoTable(doc, {
+        head: [tableColumns],
+        body: tableData,
+        startY: 60,
+        styles: { 
+          fontSize: 10,
+          cellPadding: 2
+        },
+        columnStyles: {
+          0: { cellWidth: 25 },
+          1: { cellWidth: 60 },
+          2: { cellWidth: 40, halign: 'right' },
+          3: { cellWidth: 40, halign: 'right' },
+          4: { cellWidth: 40, halign: 'right' }
+        },
+        headStyles: { 
+          fillColor: [63, 81, 181],
+          textColor: 255,
+          fontSize: 10,
+          fontStyle: 'bold'
+        }
+      })
+      
+      doc.save('laporan-keuangan.pdf')
+      handleClose()
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      alert('Terjadi kesalahan saat membuat PDF. Silakan coba lagi.')
+    }
   }
 
   // Fungsi untuk print
