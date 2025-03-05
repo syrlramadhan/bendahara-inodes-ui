@@ -4,6 +4,10 @@ Aplikasi manajemen keuangan untuk bendahara desa yang memudahkan pencatatan dan 
 
 ## Fitur
 
+- 🔐 **Autentikasi**
+  - Login/logout sistem
+  - Proteksi rute
+  - Manajemen sesi dengan cookies
 - 📊 **Dashboard** - Ringkasan dan visualisasi data keuangan
 - 💰 **Manajemen Kas**
   - Pencatatan pemasukan
@@ -18,7 +22,7 @@ Aplikasi manajemen keuangan untuk bendahara desa yang memudahkan pencatatan dan 
 - Next.js 13
 - Material-UI (MUI)
 - Context API untuk state management
-- Local Storage untuk penyimpanan preferensi
+- Cookies & Local Storage untuk autentikasi dan preferensi
 
 ## Instalasi
 
@@ -46,6 +50,8 @@ yarn dev
 ## Penggunaan
 
 1. Login sebagai bendahara
+   - Gunakan username dan password apapun (mode development)
+   - Data login akan disimpan di cookies
 2. Akses menu melalui sidebar:
    - Dashboard untuk melihat ringkasan
    - Pemasukan untuk mencatat pendapatan
@@ -53,6 +59,7 @@ yarn dev
    - Kas Desa untuk monitoring saldo
    - Laporan untuk generate laporan keuangan
 3. Gunakan toggle dark mode di menu settings untuk mengubah tema
+4. Logout melalui tombol di sidebar untuk mengakhiri sesi
 
 ## Kontribusi
 
