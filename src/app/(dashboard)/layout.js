@@ -17,10 +17,11 @@ import DarkModeIcon from '@mui/icons-material/DarkMode'
 import LightModeIcon from '@mui/icons-material/LightMode'
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useSoftUIController, setMiniSidenav } from '@/context'
 import { colors, shadows } from '@/styles/colors'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import Cookies from 'js-cookie'
 
 const menuItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
@@ -42,7 +43,18 @@ export default function DashboardLayout({ children }) {
     }
     return false
   })
+  const [user, setUser] = useState(null)
+  const router = useRouter()
   const open = Boolean(anchorEl)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const userData = localStorage.getItem('user')
+      if (userData) {
+        setUser(JSON.parse(userData))
+      }
+    }
+  }, [])
 
   const handleDrawerToggle = () => {
     setMiniSidenav(dispatch, !miniSidenav)
@@ -61,6 +73,12 @@ export default function DashboardLayout({ children }) {
     setDarkMode(newMode)
     localStorage.setItem('darkMode', JSON.stringify(newMode))
     handleClose()
+  }
+
+  const handleLogout = () => {
+    Cookies.remove('isAuthenticated')
+    localStorage.removeItem('user')
+    router.push('/authentication/sign-in')
   }
 
   const drawer = (
@@ -162,12 +180,12 @@ export default function DashboardLayout({ children }) {
 
       <List sx={{ px: 2, mt: 'auto' }}>
         <ListItem 
-          component={Link} 
-          href="/authentication/sign-in"
+          onClick={handleLogout}
           sx={{
             borderRadius: '12px',
             py: 1,
             color: darkMode ? '#fff' : colors.text.secondary,
+            cursor: 'pointer',
             '&:hover': {
               bgcolor: darkMode ? 'rgba(255, 255, 255, 0.05)' : `${colors.primary.light}20`,
             },
@@ -176,7 +194,7 @@ export default function DashboardLayout({ children }) {
           <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
             <LogoutIcon />
           </ListItemIcon>
-          <ListItemText primary="Sign In" />
+          <ListItemText primary="Logout" />
         </ListItem>
       </List>
     </Box>
@@ -291,7 +309,7 @@ export default function DashboardLayout({ children }) {
                 fontSize: '0.875rem'
               }}
             >
-              A
+              {user?.name?.charAt(0) || 'A'}
             </Box>
           </Box>
         </Toolbar>

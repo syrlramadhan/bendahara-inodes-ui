@@ -6,6 +6,7 @@ import { Visibility, VisibilityOff } from '@mui/icons-material'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { colors, shadows } from '@/styles/colors'
+import Cookies from 'js-cookie'
 
 export default function SignIn() {
   const router = useRouter()
@@ -33,7 +34,18 @@ export default function SignIn() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    // TODO: Implement actual authentication
+    
+    // Set cookie untuk autentikasi (expired dalam 1 hari)
+    Cookies.set('isAuthenticated', 'true', { expires: 1 })
+    
+    // Simpan data user
+    const userData = {
+      name: 'Admin Bendahara',
+      username: formData.username,
+      role: 'bendahara'
+    }
+    localStorage.setItem('user', JSON.stringify(userData))
+    
     router.push('/dashboard')
   }
 
