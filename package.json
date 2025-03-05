@@ -16,13 +16,16 @@
     "@mui/material": "^5.13.0",
     "chart.js": "^4.4.1",
     "js-cookie": "^3.0.5",
+    "jspdf": "^3.0.0",
+    "jspdf-autotable": "^5.0.2",
     "next": "^14.2.24",
     "react": "^18",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^18",
     "react-spring": "^9.7.5",
     "react-table": "^7.8.0",
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "eslint": "^8",
