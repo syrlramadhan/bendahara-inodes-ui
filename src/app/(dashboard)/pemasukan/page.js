@@ -89,7 +89,7 @@ export default function Pemasukan() {
   return (
     <Box>
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h5" sx={{ fontWeight: 600, color: 'blue' }}>
+        <Typography variant="h5" sx={{ fontWeight: 600, color: 'Dark grey' }}>
           Data Pemasukan
         </Typography>
         <Button

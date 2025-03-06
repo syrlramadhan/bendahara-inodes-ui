@@ -32,36 +32,9 @@ export default function Dashboard() {
     <ThemeProvider theme={theme}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, padding: { xs: '16px', sm: '24px', md: '32px' } }}>
         
-        {/* Navbar with Profile */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 32px', backgroundColor: 'transparent' }}>
-          {/* Profile Section */}
-          <Box sx={{
-            display: 'flex',
-            alignItems: 'center',
-            cursor: 'pointer',
-            flexDirection: { xs: 'column', sm: 'row' }
-          }} onClick={handleClickOpen}>
-            <img
-              src="/image copy.png"
-              alt="Profile"
-              style={{
-                width: '50%',
-                height: 'auto',
-                borderRadius: '50%',
-                marginBottom: '8px',
-                marginRight: '8px',
-              }}
-            />
-            <Box>
-              <Typography variant="body2" sx={{ color: 'Blue' }}>
-                Bendahara Desa
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'Blue', fontWeight: 600 }}>
-                EllisaBeth
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
+        {/* Navbar dengan Profile - Hapus bagian ini */}
+        {/* <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 32px', backgroundColor: 'transparent' }}>
+        </Box> */}
 
         {/* Purple Gradient Card */}
         <Card variant="purple-gradient">
@@ -71,7 +44,7 @@ export default function Dashboard() {
             justifyContent: 'space-between',
             position: 'relative',
             background: 'linear-gradient(150deg, #0284c7 0%, #0ea5e9 100%)',
-            borderRadius: '16px',
+            borderRadius: '10px',
             padding: '16px',
             height: 'auto',
             '&::before': {
@@ -104,7 +77,7 @@ export default function Dashboard() {
               </Typography>
               <Box sx={{ mt: 4 }}>
                 <Typography sx={{
-                  fontSize: '1.1rem',
+                  fontSize: '100%',
                   opacity: 0.9,
                   color: 'white',
                 }}>
@@ -179,7 +152,6 @@ export default function Dashboard() {
                         borderRadius: '6px',
                         bgcolor: colors.error.light,
                         color: colors.error.dark,
-                        // Add this line to change the font color to black
                         color: 'black',
                       }}>
                         Pengeluaran
@@ -205,7 +177,6 @@ export default function Dashboard() {
                         borderRadius: '6px',
                         bgcolor: colors.success.light,
                         color: colors.success.dark,
-                        // Add this line to change the font color to black
                         color: 'black',
                       }}>
                         Pemasukan
@@ -242,50 +213,58 @@ export default function Dashboard() {
             Profil Bendahara Desa
           </DialogTitle>
           <DialogContent sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
-            alignItems: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+          alignItems: 'center',
+        }}>
+          <img
+            src="image copy.png"
+            alt="Profile"
+            style={{
+              width: '100%', // Make the image take up 100% of its container's width
+              maxWidth: '250px', // Set a maximum width for larger screens
+              height: 'auto', // Maintain aspect ratio
+              borderRadius: '50%', // Keep the image rounded
+              marginBottom: '16px',
+            }}
+          />
+          <Typography variant="h6" sx={{ fontWeight: 600, textAlign: 'center' }}>
+            Nama Bendahara: Andi Citra Ayu Lestari
+          </Typography>
+          <Typography variant="body1" sx={{ textAlign: 'center', color: colors.text.secondary }}>
+            Alamat: Jl. Raya No.123, Jeneponto, Sulawesi Selatan
+          </Typography>
+          <Typography variant="body1" sx={{ textAlign: 'center', color: colors.text.secondary }}>
+            Tempat Tgl Lahir : yyy , yyy,yyy
+          </Typography>
+          <Typography variant="body1" sx={{ textAlign: 'center', color: colors.text.secondary }}>
+            Status : bendahara@desa.jeneponto
+          </Typography>
+          <Typography variant="body1" sx={{ textAlign: 'center', color: colors.text.secondary }}>
+            Pengalaman: bendahara@desa.jeneponto
+          </Typography>
+        </DialogContent>
+
+        <DialogActions sx={{
+          justifyContent: 'center',
+          marginTop: '16px',
+        }}>
+          <Button variant="contained" onClick={handleClose} sx={{
+            backgroundColor: colors.primary.main,
+            color: 'white',
+            borderRadius: '8px',
+            padding: '8px 16px',
+            fontWeight: 600,
+            '&:hover': {
+              backgroundColor: colors.primary.dark,
+            },
           }}>
-            <img
-              src="image copy.png"
-              alt="Profile"
-              style={{
-                width: '90%',
-                height: '100%',
-                borderRadius: '50%',
-                marginBottom: '16px',
-              }}
-            />
-            <Typography variant="h6" sx={{ fontWeight: 600, textAlign: 'center' }}>
-              Nama Bendahara: EllisaBeth
-            </Typography>
-            <Typography variant="body1" sx={{ textAlign: 'center', color: colors.text.secondary }}>
-              Alamat: Jl. Raya No.123, Jeneponto, Sulawesi Selatan
-            </Typography>
-            <Typography variant="body1" sx={{ textAlign: 'center', color: colors.text.secondary }}>
-              Email: bendahara@desa.jeneponto
-            </Typography>
-          </DialogContent>
-          <DialogActions sx={{
-            justifyContent: 'center',
-            marginTop: '16px',
-          }}>
-            <Button variant="contained" onClick={handleClose} sx={{
-              backgroundColor: colors.primary.main,
-              color: 'white',
-              borderRadius: '8px',
-              padding: '8px 16px',
-              fontWeight: 600,
-              '&:hover': {
-                backgroundColor: colors.primary.dark,
-              },
-            }}>
-              Close
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </Box>
-    </ThemeProvider>
-  )
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  </ThemeProvider>
+)
 }

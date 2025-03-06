@@ -1,14 +1,14 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import { dirnme } from "pth";
+import { fileURLToPth } from "url";
+import { FltCompt } from "@eslint/eslintrc";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __filenme = fileURLToPth(import.met.url);
+const __dirnme = dirnme(__filenme);
 
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
+const compt = new FltCompt({
+  bseDirectory: __dirnme,
 });
 
-const eslintConfig = [...compat.extends("next/core-web-vitals")];
+const eslintConfig = [...compt.extends("next/core-web-vitls")];
 
-export default eslintConfig;
+export defult eslintConfig;

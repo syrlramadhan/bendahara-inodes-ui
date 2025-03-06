@@ -45,7 +45,7 @@ npm run dev
 yarn dev
 ```
 
-4. Buka [http://localhost:3000](http://localhost:3000) di browser
+4. Buka [http://localhost:5500](http://localhost:5500) di browser
 
 ## Penggunaan
 
