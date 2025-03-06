@@ -35,10 +35,10 @@ export default function SignIn() {
   const handleSubmit = (e) => {
     e.preventDefault()
     
-    // Set cookie untuk autentikasi (expired dalam 1 hari)
+    // Set cookie for authentication (expires in 1 day)
     Cookies.set('isAuthenticated', 'true', { expires: 1 })
     
-    // Simpan data user
+    // Save user data
     const userData = {
       name: 'Admin Bendahara',
       username: formData.username,
@@ -55,18 +55,23 @@ export default function SignIn() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      bgcolor: darkMode ? '#1a1a1a' : '#F8F9FA',
+      background: 'transparent', // Set the background of the outer Box to transparent
       p: 3,
-      transition: 'background-color 0.3s ease'
+      transition: 'background-color 0.3s ease',
+      position: 'relative',
     }}>
       <Card sx={{
-        maxWidth: 400,
+        maxWidth: 450,
         width: '100%',
-        p: 4,
+        p: 5,
         boxShadow: shadows.card,
         borderRadius: '16px',
-        bgcolor: darkMode ? '#2d2d2d' : 'white',
-        transition: 'background-color 0.3s ease'
+        bgcolor: darkMode ? 'rgba(45, 45, 45, 0.85)' : 'rgba(255, 255, 255, 0.9)', // Use transparent or semi-transparent background for the card
+        backdropFilter: 'blur(10px)', // Add a backdrop blur effect
+        transition: 'background-color 0.3s ease',
+        '&:hover': {
+          boxShadow: '0 8px 15px rgba(0, 0, 0, 0.1)',
+        }
       }}>
         <Box sx={{ 
           display: 'flex', 
@@ -75,22 +80,26 @@ export default function SignIn() {
           mb: 4
         }}>
           <Image
-            src="/logo.png"
+            src="/image.png"
             alt="Logo"
             width={64}
             height={64}
-            style={{ marginBottom: '16px' }}
+            style={{ marginBottom: '16px', borderRadius: '50%' }}
           />
-          <Typography variant="h5" sx={{ 
+          <Typography variant="h4" sx={{
             fontWeight: 'bold',
-            color: darkMode ? '#fff' : colors.text.primary,
+            color: darkMode ? '#fff' : '#4E73DF',
             mb: 1,
+            textAlign: 'center',
+            fontSize: '1.75rem', 
             transition: 'color 0.3s ease'
           }}>
-            Selamat Datang
+            Selamat Datang 
           </Typography>
-          <Typography variant="body2" sx={{ 
-            color: darkMode ? 'rgba(255,255,255,0.7)' : colors.text.secondary,
+          <Typography variant="body2" sx={{
+            color: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(0, 0, 0, 0.6)',
+            textAlign: 'center',
+            fontSize: '1rem',
             transition: 'color 0.3s ease'
           }}>
             Silakan login untuk melanjutkan
@@ -104,8 +113,8 @@ export default function SignIn() {
             name="username"
             value={formData.username}
             onChange={handleChange}
-            sx={{ 
-              mb: 2,
+            sx={{
+              mb: 3,
               '& .MuiOutlinedInput-root': {
                 borderRadius: '12px',
                 color: darkMode ? '#fff' : 'inherit',
@@ -142,7 +151,7 @@ export default function SignIn() {
                 </InputAdornment>
               ),
             }}
-            sx={{ 
+            sx={{
               mb: 3,
               '& .MuiOutlinedInput-root': {
                 borderRadius: '12px',
@@ -170,11 +179,14 @@ export default function SignIn() {
               py: 1.5,
               borderRadius: '12px',
               textTransform: 'none',
-              fontSize: '1rem',
+              fontSize: '1.125rem',
               fontWeight: 600,
               '&:hover': {
                 bgcolor: colors.primary.dark,
-              }
+                transform: 'scale(1.05)',
+                boxShadow: '0 4px 10px rgba(0, 0, 0, 0.2)',
+              },
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
             }}
           >
             Login
@@ -183,4 +195,4 @@ export default function SignIn() {
       </Card>
     </Box>
   )
-} 
+}

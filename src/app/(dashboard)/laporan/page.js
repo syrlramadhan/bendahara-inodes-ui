@@ -15,7 +15,8 @@ import {
   Paper,
   Menu,
   MenuItem,
-  Container
+  Container,
+  Grid
 } from '@mui/material'
 import { 
   FileDownload as FileDownloadIcon,
@@ -196,26 +197,32 @@ export default function LaporanKeuangan() {
         </Box>
 
         {/* Kartu ringkasan */}
-        <Box display="flex" gap={2} mb={3}>
-          <Card sx={{ flex: 1, p: 2 }}>
-            <Typography variant="h6" gutterBottom>Total Pemasukan</Typography>
-            <Typography variant="h5" color="success.main">
-              {formatRupiah(totalPemasukan)}
-            </Typography>
-          </Card>
-          <Card sx={{ flex: 1, p: 2 }}>
-            <Typography variant="h6" gutterBottom>Total Pengeluaran</Typography>
-            <Typography variant="h5" color="error.main">
-              {formatRupiah(totalPengeluaran)}
-            </Typography>
-          </Card>
-          <Card sx={{ flex: 1, p: 2 }}>
-            <Typography variant="h6" gutterBottom>Saldo Akhir</Typography>
-            <Typography variant="h5" color="primary.main">
-              {formatRupiah(saldoAkhir)}
-            </Typography>
-          </Card>
-        </Box>
+        <Grid container spacing={2} mb={3}>
+          <Grid item xs={12} sm={4}>
+            <Card sx={{ p: 2 }}>
+              <Typography variant="h6" gutterBottom>Total Pemasukan</Typography>
+              <Typography variant="h5" color="success.main">
+                {formatRupiah(totalPemasukan)}
+              </Typography>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <Card sx={{ p: 2 }}>
+              <Typography variant="h6" gutterBottom>Total Pengeluaran</Typography>
+              <Typography variant="h5" color="error.main">
+                {formatRupiah(totalPengeluaran)}
+              </Typography>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <Card sx={{ p: 2 }}>
+              <Typography variant="h6" gutterBottom>Saldo Akhir</Typography>
+              <Typography variant="h5" color="primary.main">
+                {formatRupiah(saldoAkhir)}
+              </Typography>
+            </Card>
+          </Grid>
+        </Grid>
 
         {/* Tabel transaksi */}
         <TableContainer component={Paper}>
@@ -245,4 +252,4 @@ export default function LaporanKeuangan() {
       </div>
     </Container>
   )
-} 
+}

@@ -92,8 +92,8 @@ export default function DashboardLayout({ children }) {
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Image
-            src="/logo.png"
-            alt="Coconut Logo"
+            src="/image.png"
+            alt="Desa Logo"
             width={48}
             height={48}
             style={{ marginRight: '12px' }}

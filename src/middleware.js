@@ -17,7 +17,7 @@ export function middleware(request) {
     }
   }
 
-  // Jika user sudah login dan mencoba akses halaman login, redirect ke dashboard
+  // Jika user sudah login dan mencoba akses halaman login, redirect ke 
   if (request.nextUrl.pathname.startsWith('/authentication/sign-in')) {
     const isAuthenticated = request.cookies.get('isAuthenticated')
     if (isAuthenticated) {
