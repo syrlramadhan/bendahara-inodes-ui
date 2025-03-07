@@ -14,7 +14,7 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         // Check if user is logged in on mount
-        const token = Cookies.get('token');
+        const token = Cookies.get('authToken');
         const savedUser = localStorage.getItem('user');
 
         if (token && savedUser) {
@@ -29,7 +29,7 @@ export function AuthProvider({ children }) {
             
             if (result.success) {
                 // Set cookie for authentication (expires in 1 day)
-                Cookies.set('token', result.data.token, { expires: 1 });
+                Cookies.set('authToken', result.data.token, { expires: 1 });
                 
                 // Save user data
                 const userData = {
@@ -58,7 +58,7 @@ export function AuthProvider({ children }) {
     };
 
     const logout = () => {
-        Cookies.remove('token');
+        Cookies.remove('authToken');
         localStorage.removeItem('user');
         setUser(null);
         router.push('/authentication/sign-in');
