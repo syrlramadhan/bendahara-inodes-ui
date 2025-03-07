@@ -16,67 +16,85 @@ import {
   DialogActions,
   TextField,
   Box,
-  Typography
+  Typography,
+  Card,
+  CardContent,
+  IconButton,
+  Tooltip,
+  Divider,
+  Alert,
+  Fade
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
-import { Card } from '@/components/ui/card'
-import { colors } from '@/styles/colors'
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
+import { styled } from '@mui/material/styles'
+
+// Styled components
+const StyledCard = styled(Card)(({ theme }) => ({
+  backgroundColor: '#ffffff',
+  borderRadius: '16px',
+  boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)',
+  overflow: 'hidden'
+}))
+
+const HeaderBox = styled(Box)(({ theme }) => ({
+  background: 'linear-gradient(135deg, #2e7d32 0%, #4caf50 100%)',
+  padding: '32px',
+  color: 'white',
+  borderRadius: '16px',
+  marginBottom: '24px',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  boxShadow: '0 4px 20px 0 rgba(0,0,0,0.1)'
+}))
+
+const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
+  borderRadius: '16px',
+  boxShadow: 'none',
+  '& .MuiTableCell-head': {
+    backgroundColor: '#f8f9fa',
+    fontWeight: 600,
+    color: '#2e7d32'
+  }
+}))
+
+// Data dummy untuk testing
+const dummyData = [
+  {
+    id: 1,
+    tanggal: '2024-03-20',
+    nilai: 1500000,
+    keterangan: 'Dana desa tahap 1'
+  },
+  {
+    id: 2,
+    tanggal: '2024-03-19',
+    nilai: 2000000,
+    keterangan: 'Retribusi pasar'
+  },
+  {
+    id: 3,
+    tanggal: '2024-03-18',
+    nilai: 3500000,
+    keterangan: 'Bantuan provinsi'
+  }
+]
 
 export default function Pemasukan() {
-  const [rows, setRows] = useState([
-    {
-      id: 1,
-      tanggal: '2024-02-20',
-      kategori: 'Pajak',
-      keterangan: 'Pajak Bumi dan Bangunan',
-      jumlah: 2500000
-    },
-    // Data dummy untuk testing
-  ])
+  const [rows, setRows] = useState(dummyData)
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [formData, setFormData] = useState({
     tanggal: '',
-    kategori: '',
-    keterangan: '',
-    jumlah: ''
+    nilai: '',
+    keterangan: ''
   })
-
-  const handleAdd = () => {
-    setEditingId(null)
-    setFormData({
-      tanggal: '',
-      kategori: '',
-      keterangan: '',
-      jumlah: ''
-    })
-    setShowModal(true)
-  }
-
-  const handleEdit = (row) => {
-    setEditingId(row.id)
-    setFormData(row)
-    setShowModal(true)
-  }
-
-  const handleDelete = (id) => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-      setRows(rows.filter(row => row.id !== id))
-    }
-  }
-
-  const handleSubmit = () => {
-    if (editingId) {
-      setRows(rows.map(row => 
-        row.id === editingId ? { ...formData, id: editingId } : row
-      ))
-    } else {
-      setRows([...rows, { ...formData, id: rows.length + 1 }])
-    }
-    setShowModal(false)
-  }
+  const [showAlert, setShowAlert] = useState(false)
+  const [alertMessage, setAlertMessage] = useState('')
+  const [alertType, setAlertType] = useState('success')
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -86,117 +104,254 @@ export default function Pemasukan() {
     }))
   }
 
+  const handleAdd = () => {
+    setEditingId(null)
+    setFormData({
+      tanggal: '',
+      nilai: '',
+      keterangan: ''
+    })
+    setShowModal(true)
+  }
+
+  const handleEdit = (row) => {
+    setEditingId(row.id)
+    setFormData({
+      tanggal: row.tanggal,
+      nilai: row.nilai,
+      keterangan: row.keterangan
+    })
+    setShowModal(true)
+  }
+
+  const handleDelete = (id) => {
+    if (window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+      setRows(rows.filter(row => row.id !== id))
+      showAlertMessage('Data berhasil dihapus', 'success')
+    }
+  }
+
+  const showAlertMessage = (message, type) => {
+    setAlertMessage(message)
+    setAlertType(type)
+    setShowAlert(true)
+    setTimeout(() => setShowAlert(false), 3000)
+  }
+
+  const handleSave = () => {
+    if (!formData.tanggal || !formData.nilai || !formData.keterangan) {
+      showAlertMessage('Semua field harus diisi', 'error')
+      return
+    }
+
+    if (editingId) {
+      setRows(rows.map(row => 
+        row.id === editingId 
+          ? { ...row, ...formData }
+          : row
+      ))
+      showAlertMessage('Data berhasil diperbarui', 'success')
+    } else {
+      const newRow = {
+        id: rows.length + 1,
+        ...formData
+      }
+      setRows([...rows, newRow])
+      showAlertMessage('Data berhasil ditambahkan', 'success')
+    }
+    setShowModal(false)
+  }
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount)
+  }
+
+  const totalPemasukan = rows.reduce((sum, row) => sum + row.nilai, 0)
+
   return (
-    <Box>
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h5" sx={{ fontWeight: 600, color: 'Dark grey' }}>
-          Data Pemasukan
-        </Typography>
+    <Box sx={{ padding: '24px' }}>
+      <Fade in={showAlert}>
+        <Alert 
+          severity={alertType}
+          sx={{ 
+            position: 'fixed', 
+            top: 24, 
+            right: 24, 
+            zIndex: 9999,
+            boxShadow: '0 4px 20px 0 rgba(0,0,0,0.1)',
+            borderRadius: '12px'
+          }}
+        >
+          {alertMessage}
+        </Alert>
+      </Fade>
+
+      <HeaderBox>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
+            Data Pemasukan
+          </Typography>
+          <Typography variant="subtitle1" sx={{ opacity: 0.8 }}>
+            Total Pemasukan: {formatCurrency(totalPemasukan)}
+          </Typography>
+        </Box>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={handleAdd}
           sx={{
-            bgcolor: colors.primary.main,
-            '&:hover': {
-              bgcolor: colors.primary.dark
-            }
+            bgcolor: 'white',
+            color: '#2e7d32',
+            '&:hover': { 
+              bgcolor: 'rgba(255,255,255,0.9)',
+              boxShadow: '0 8px 16px 0 rgba(0,0,0,0.1)'
+            },
+            borderRadius: '12px',
+            textTransform: 'none',
+            fontWeight: 600,
+            px: 3
           }}
         >
           Tambah Pemasukan
         </Button>
-      </Box>
+      </HeaderBox>
 
-      <Card>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>No</TableCell>
-                <TableCell>Tanggal</TableCell>
-                <TableCell>Kategori</TableCell>
-                <TableCell>Keterangan</TableCell>
-                <TableCell>Jumlah</TableCell>
-                <TableCell>Aksi</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rows.map((row, index) => (
-                <TableRow key={row.id}>
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell>{row.tanggal}</TableCell>
-                  <TableCell>{row.kategori}</TableCell>
-                  <TableCell>{row.keterangan}</TableCell>
-                  <TableCell>Rp {row.jumlah.toLocaleString('id-ID')}</TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        startIcon={<EditIcon />}
-                        onClick={() => handleEdit(row)}
-                        sx={{
-                          bgcolor: colors.warning.main,
-                          '&:hover': {
-                            bgcolor: colors.warning.dark
-                          }
-                        }}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        startIcon={<DeleteIcon />}
-                        onClick={() => handleDelete(row.id)}
-                        sx={{
-                          bgcolor: colors.error.main,
-                          '&:hover': {
-                            bgcolor: colors.error.dark
-                          }
-                        }}
-                      >
-                        Hapus
-                      </Button>
-                    </Box>
-                  </TableCell>
+      <StyledCard>
+        <CardContent sx={{ p: 0 }}>
+          <StyledTableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>No</TableCell>
+                  <TableCell>Tanggal</TableCell>
+                  <TableCell>Jumlah</TableCell>
+                  <TableCell>Keterangan</TableCell>
+                  <TableCell align="center">Aksi</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Card>
+              </TableHead>
+              <TableBody>
+                {rows.map((row, index) => (
+                  <TableRow 
+                    key={row.id} 
+                    sx={{ 
+                      '&:hover': { 
+                        bgcolor: '#f8f9fa',
+                        '& .action-buttons': {
+                          opacity: 1
+                        }
+                      }
+                    }}
+                  >
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>{row.tanggal}</TableCell>
+                    <TableCell sx={{ color: '#2e7d32', fontWeight: 600 }}>
+                      {formatCurrency(row.nilai)}
+                    </TableCell>
+                    <TableCell>{row.keterangan}</TableCell>
+                    <TableCell align="center">
+                      <Box 
+                        className="action-buttons"
+                        sx={{ 
+                          opacity: 0,
+                          transition: 'opacity 0.2s',
+                          display: 'flex',
+                          gap: 1,
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <Tooltip title="Edit">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleEdit(row)}
+                            sx={{
+                              color: '#ed6c02',
+                              '&:hover': { bgcolor: 'rgba(237, 108, 2, 0.1)' }
+                            }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Hapus">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDelete(row.id)}
+                            sx={{
+                              color: '#d32f2f',
+                              '&:hover': { bgcolor: 'rgba(211, 47, 47, 0.1)' }
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {rows.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                      <AccountBalanceIcon sx={{ fontSize: 48, color: '#ccc', mb: 2 }} />
+                      <Typography variant="body1" color="textSecondary">
+                        Belum ada data pemasukan
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </StyledTableContainer>
+        </CardContent>
+      </StyledCard>
 
       <Dialog 
         open={showModal} 
         onClose={() => setShowModal(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            boxShadow: '0 4px 20px 0 rgba(0,0,0,0.1)'
+          }
+        }}
       >
-        <DialogTitle>
+        <DialogTitle sx={{ 
+          pb: 2,
+          borderBottom: '1px solid #eee',
+          color: '#2e7d32',
+          fontWeight: 600
+        }}>
           {editingId ? 'Edit Pemasukan' : 'Tambah Pemasukan'}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ pt: 3 }}>
           <TextField
-            margin="dense"
             label="Tanggal"
-            type="date"
             name="tanggal"
+            type="date"
             value={formData.tanggal}
             onChange={handleInputChange}
             fullWidth
             InputLabelProps={{ shrink: true }}
+            sx={{ mb: 2 }}
           />
           <TextField
-            margin="dense"
-            label="Kategori"
-            name="kategori"
-            value={formData.kategori}
+            label="Jumlah"
+            name="nilai"
+            type="number"
+            value={formData.nilai}
             onChange={handleInputChange}
             fullWidth
+            sx={{ mb: 2 }}
+            InputProps={{
+              startAdornment: <Typography sx={{ mr: 1, color: '#666' }}>Rp</Typography>
+            }}
           />
           <TextField
-            margin="dense"
             label="Keterangan"
             name="keterangan"
             value={formData.keterangan}
@@ -205,19 +360,27 @@ export default function Pemasukan() {
             multiline
             rows={3}
           />
-          <TextField
-            margin="dense"
-            label="Jumlah"
-            name="jumlah"
-            type="number"
-            value={formData.jumlah}
-            onChange={handleInputChange}
-            fullWidth
-          />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowModal(false)}>Batal</Button>
-          <Button onClick={handleSubmit} variant="contained">
+        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #eee' }}>
+          <Button 
+            onClick={() => setShowModal(false)} 
+            sx={{ 
+              color: '#666',
+              '&:hover': { bgcolor: '#f5f5f5' }
+            }}
+          >
+            Batal
+          </Button>
+          <Button 
+            onClick={handleSave} 
+            variant="contained"
+            sx={{ 
+              bgcolor: '#2e7d32',
+              '&:hover': { bgcolor: '#1b5e20' },
+              borderRadius: '8px',
+              px: 3
+            }}
+          >
             Simpan
           </Button>
         </DialogActions>

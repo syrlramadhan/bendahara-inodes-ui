@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Box,
   Card,
@@ -16,13 +16,20 @@ import {
   Menu,
   MenuItem,
   Container,
-  Grid
+  Grid,
+  Fade,
+  Grow,
+  styled,
+  keyframes
 } from '@mui/material'
 import { 
   FileDownload as FileDownloadIcon,
   Print as PrintIcon,
   PictureAsPdf as PdfIcon,
   TableView as ExcelIcon,
+  TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon,
+  AccountBalance as AccountBalanceIcon
 } from '@mui/icons-material'
 import { colors } from '@/styles/colors'
 import jsPDF from 'jspdf'
@@ -36,6 +43,155 @@ const dummyData = [
   { tanggal: '2024-01-10', keterangan: 'Pembangunan Jalan', debit: 0, kredit: 25000000, saldo: 24500000 },
   { tanggal: '2024-01-15', keterangan: 'Dana Bantuan', debit: 30000000, kredit: 0, saldo: 54500000 },
 ]
+
+// Animasi keyframes
+const slideUp = keyframes`
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+`;
+
+const fadeIn = keyframes`
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+`;
+
+const shimmer = keyframes`
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+`;
+
+// Styled Components
+const AnimatedContainer = styled(Container)`
+  animation: ${fadeIn} 0.5s ease-out;
+`;
+
+const AnimatedTypography = styled(Typography)`
+  animation: ${fadeIn} 0.8s ease-out;
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 1000px 100%;
+    animation: ${shimmer} 2s infinite linear;
+  }
+`;
+
+const StyledCard = styled(Card)(({ theme, variant, delay = 0 }) => ({
+  padding: theme.spacing(3),
+  background: theme.palette.mode === 'dark' 
+    ? variant === 'income'
+      ? 'linear-gradient(135deg, #2196F3 30%, #64B5F6 100%)'
+      : variant === 'expense'
+      ? 'linear-gradient(135deg, #1E88E5 30%, #42A5F5 100%)'
+      : 'linear-gradient(135deg, #1976D2 30%, #2196F3 100%)'
+    : variant === 'income'
+      ? 'linear-gradient(135deg, #1976D2 0%, #42A5F5 100%)'
+      : variant === 'expense'
+      ? 'linear-gradient(135deg, #1565C0 0%, #1976D2 100%)'
+      : 'linear-gradient(135deg, #0D47A1 0%, #1565C0 100%)',
+  color: '#ffffff',
+  borderRadius: '16px',
+  boxShadow: theme.palette.mode === 'dark' 
+    ? '0 8px 16px rgba(0,0,0,0.4)'
+    : '0 8px 16px rgba(0,0,0,0.1)',
+  transition: 'all 0.3s ease-in-out',
+  position: 'relative',
+  overflow: 'hidden',
+  animation: `${slideUp} 0.5s ease-out ${delay}s both`,
+  '&:hover': {
+    transform: 'translateY(-5px) scale(1.02)',
+    boxShadow: theme.palette.mode === 'dark'
+      ? '0 12px 20px rgba(0,0,0,0.6)'
+      : '0 12px 20px rgba(0,0,0,0.15)',
+  },
+  '& .MuiTypography-root': {
+    color: '#ffffff',
+    textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+  }
+}));
+
+const IconWrapper = styled(Box)({
+  position: 'absolute',
+  right: 16,
+  top: '50%',
+  transform: 'translateY(-50%)',
+  opacity: 0.2,
+  fontSize: 48,
+});
+
+const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
+  borderRadius: '16px',
+  boxShadow: theme.palette.mode === 'dark' 
+    ? '0 4px 12px rgba(0,0,0,0.3)'
+    : '0 8px 16px rgba(0,0,0,0.1)',
+  overflow: 'hidden',
+  backgroundColor: theme.palette.mode === 'dark' ? '#1E1E1E' : '#ffffff',
+  animation: `${slideUp} 0.8s ease-out 0.6s both`,
+  '& .MuiTableHead-root': {
+    backgroundColor: theme.palette.mode === 'dark' ? '#2D2D2D' : '#f8f9fa',
+    '& .MuiTableCell-head': {
+      color: theme.palette.mode === 'dark' ? '#FFFFFF' : '#1976D2',
+      fontWeight: 600,
+      whiteSpace: 'nowrap',
+      borderBottom: `2px solid ${theme.palette.mode === 'dark' ? '#90CAF9' : '#1976D2'}`,
+    },
+  },
+  '& .MuiTableBody-root': {
+    '& .MuiTableRow-root': {
+      opacity: 0,
+      animation: `${fadeIn} 0.5s ease-out forwards`,
+      '&:nth-of-type(1)': { animationDelay: '0.8s' },
+      '&:nth-of-type(2)': { animationDelay: '0.9s' },
+      '&:nth-of-type(3)': { animationDelay: '1.0s' },
+      '&:nth-of-type(4)': { animationDelay: '1.1s' },
+      '&:nth-of-type(5)': { animationDelay: '1.2s' },
+      transition: 'background-color 0.3s ease, transform 0.3s ease',
+      '&:hover': {
+        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(25, 118, 210, 0.04)',
+        transform: 'scale(1.01)',
+      },
+      '& .MuiTableCell-root': {
+        borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(224, 224, 224, 0.8)'}`,
+        color: theme.palette.mode === 'dark' ? '#FFFFFF' : 'inherit',
+        transition: 'color 0.3s ease',
+      },
+    },
+  },
+}));
+
+const StyledButton = styled(Button)(({ theme }) => ({
+  borderRadius: '12px',
+  padding: '8px 24px',
+  background: 'linear-gradient(135deg, #1976D2 0%, #2196F3 100%)',
+  '&:hover': {
+    background: 'linear-gradient(135deg, #1565C0 0%, #1976D2 100%)',
+  },
+}));
 
 export default function LaporanKeuangan() {
   const [anchorEl, setAnchorEl] = useState(null)
@@ -164,68 +320,100 @@ export default function LaporanKeuangan() {
   const saldoAkhir = totalPemasukan - totalPengeluaran
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <AnimatedContainer maxWidth="lg" sx={{ 
+      mt: 4, 
+      mb: 4,
+      backgroundColor: theme => theme.palette.mode === 'dark' ? '#121212' : 'transparent',
+      borderRadius: '16px',
+      padding: '24px'
+    }}>
       <div id="print-content">
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-          <Typography variant="h4" gutterBottom>
+          <AnimatedTypography 
+            variant="h4" 
+            sx={{
+              fontWeight: 600,
+              color: theme => theme.palette.mode === 'dark' ? '#42A5F5' : '#1976D2',
+              textShadow: theme => theme.palette.mode === 'dark' ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+            }}
+          >
             Laporan Keuangan
-          </Typography>
-          <Button
+          </AnimatedTypography>
+          <StyledButton
             variant="contained"
             startIcon={<FileDownloadIcon />}
             onClick={handleClick}
             sx={{ '@media print': { display: 'none' } }}
           >
             Unduh Laporan
-          </Button>
+          </StyledButton>
           <Menu
             anchorEl={anchorEl}
             open={open}
             onClose={handleClose}
-            sx={{ '@media print': { display: 'none' } }}
+            sx={{ 
+              '@media print': { display: 'none' },
+              '& .MuiPaper-root': {
+                borderRadius: '12px',
+                boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
+              },
+            }}
           >
             <MenuItem onClick={generatePDF}>
-              <PdfIcon sx={{ mr: 1 }} /> Unduh PDF
+              <PdfIcon sx={{ mr: 1, color: '#f44336' }} /> Unduh PDF
             </MenuItem>
             <MenuItem onClick={exportToExcel}>
-              <ExcelIcon sx={{ mr: 1 }} /> Unduh Excel
+              <ExcelIcon sx={{ mr: 1, color: '#4CAF50' }} /> Unduh Excel
             </MenuItem>
             <MenuItem onClick={handlePrint}>
-              <PrintIcon sx={{ mr: 1 }} /> Cetak
+              <PrintIcon sx={{ mr: 1, color: '#2196F3' }} /> Cetak
             </MenuItem>
           </Menu>
         </Box>
 
-        {/* Kartu ringkasan */}
-        <Grid container spacing={2} mb={3}>
+        <Grid container spacing={3} mb={4}>
           <Grid item xs={12} sm={4}>
-            <Card sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>Total Pemasukan</Typography>
-              <Typography variant="h5" color="success.main">
+            <StyledCard variant="income" delay={0.2}>
+              <IconWrapper>
+                <TrendingUpIcon sx={{ fontSize: 48 }} />
+              </IconWrapper>
+              <Typography variant="subtitle1" sx={{ mb: 1, opacity: 0.8, position: 'relative', zIndex: 1 }}>
+                Total Pemasukan
+              </Typography>
+              <Typography variant="h4" sx={{ fontWeight: 600, position: 'relative', zIndex: 1 }}>
                 {formatRupiah(totalPemasukan)}
               </Typography>
-            </Card>
+            </StyledCard>
           </Grid>
           <Grid item xs={12} sm={4}>
-            <Card sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>Total Pengeluaran</Typography>
-              <Typography variant="h5" color="error.main">
+            <StyledCard variant="expense" delay={0.4}>
+              <IconWrapper>
+                <TrendingDownIcon sx={{ fontSize: 48 }} />
+              </IconWrapper>
+              <Typography variant="subtitle1" sx={{ mb: 1, opacity: 0.8, position: 'relative', zIndex: 1 }}>
+                Total Pengeluaran
+              </Typography>
+              <Typography variant="h4" sx={{ fontWeight: 600, position: 'relative', zIndex: 1 }}>
                 {formatRupiah(totalPengeluaran)}
               </Typography>
-            </Card>
+            </StyledCard>
           </Grid>
           <Grid item xs={12} sm={4}>
-            <Card sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>Saldo Akhir</Typography>
-              <Typography variant="h5" color="primary.main">
+            <StyledCard delay={0.6}>
+              <IconWrapper>
+                <AccountBalanceIcon sx={{ fontSize: 48 }} />
+              </IconWrapper>
+              <Typography variant="subtitle1" sx={{ mb: 1, opacity: 0.8, position: 'relative', zIndex: 1 }}>
+                Saldo Akhir
+              </Typography>
+              <Typography variant="h4" sx={{ fontWeight: 600, position: 'relative', zIndex: 1 }}>
                 {formatRupiah(saldoAkhir)}
               </Typography>
-            </Card>
+            </StyledCard>
           </Grid>
         </Grid>
 
-        {/* Tabel transaksi */}
-        <TableContainer component={Paper}>
+        <StyledTableContainer>
           <Table>
             <TableHead>
               <TableRow>
@@ -241,15 +429,52 @@ export default function LaporanKeuangan() {
                 <TableRow key={index}>
                   <TableCell>{row.tanggal}</TableCell>
                   <TableCell>{row.keterangan}</TableCell>
-                  <TableCell align="right">{formatRupiah(row.debit)}</TableCell>
-                  <TableCell align="right">{formatRupiah(row.kredit)}</TableCell>
-                  <TableCell align="right">{formatRupiah(row.saldo)}</TableCell>
+                  <TableCell 
+                    align="right"
+                    sx={{ 
+                      color: theme => row.debit > 0 
+                        ? theme.palette.mode === 'dark' ? '#FFFFFF' : '#1976D2'
+                        : theme.palette.mode === 'dark' ? '#FFFFFF' : 'inherit',
+                      fontWeight: row.debit > 0 ? 600 : 400
+                    }}
+                  >
+                    {formatRupiah(row.debit)}
+                  </TableCell>
+                  <TableCell 
+                    align="right"
+                    sx={{ 
+                      color: theme => row.kredit > 0 
+                        ? theme.palette.mode === 'dark' ? '#FFFFFF' : '#1976D2'
+                        : theme.palette.mode === 'dark' ? '#FFFFFF' : 'inherit',
+                      fontWeight: row.kredit > 0 ? 600 : 400
+                    }}
+                  >
+                    {formatRupiah(row.kredit)}
+                  </TableCell>
+                  <TableCell 
+                    align="right"
+                    sx={{ 
+                      color: theme => theme.palette.mode === 'dark' ? '#FFFFFF' : '#1976D2',
+                      fontWeight: 600 
+                    }}
+                  >
+                    {formatRupiah(row.saldo)}
+                  </TableCell>
                 </TableRow>
               ))}
+              {dummyData.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                    <Typography variant="body1" color="textSecondary">
+                      Belum ada data transaksi
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
-        </TableContainer>
+        </StyledTableContainer>
       </div>
-    </Container>
+    </AnimatedContainer>
   )
 }

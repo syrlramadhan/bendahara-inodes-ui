@@ -1,9 +1,8 @@
 'use client'
 
 import { Box, Typography, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, Button, Grid } from '@mui/material'
-import { createTheme, ThemeProvider } from '@mui/material/styles'
+import { createTheme, ThemeProvider, styled } from '@mui/material/styles'
 import { Card, CardHeader, CardBody } from '@/components/ui/card'
-import { StatsCard } from '@/components/dashboard/stats-card'
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import TrendingDownIcon from '@mui/icons-material/TrendingDown'
@@ -17,6 +16,58 @@ const theme = createTheme({
     fontFamily: '"Poppins", sans-serif', 
   },
 })
+
+// Styled Components
+const StyledCard = styled(Card)`
+  background: ${({ variant }) => {
+    const gradients = {
+      blue: 'linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)',
+      green: 'linear-gradient(135deg, #2e7d32 0%, #4caf50 100%)',
+      red: 'linear-gradient(135deg, #c62828 0%, #d32f2f 100%)',
+      purple: 'linear-gradient(135deg, #4a148c 0%, #6a1b9a 100%)'
+    };
+    return gradients[variant] || gradients.blue;
+  }};
+  border-radius: 16px;
+  box-shadow: 0 4px 20px 0 rgba(0,0,0,0.1);
+  color: white;
+  position: relative;
+  overflow: hidden;
+  min-height: 140px;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at top right, rgba(255,255,255,0.2) 0%, transparent 60%);
+    opacity: 0.6;
+    z-index: 1;
+  }
+`;
+
+const IconWrapper = styled(Box)`
+  position: absolute;
+  right: -20px;
+  bottom: -20px;
+  opacity: 0.2;
+  z-index: 0;
+`;
+
+const ContentWrapper = styled(Box)`
+  position: relative;
+  z-index: 2;
+  padding: 24px;
+`;
+
+const HistoryCard = styled(Card)`
+  background-color: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px 0 rgba(0,0,0,0.05);
+  overflow: hidden;
+`;
 
 export default function Dashboard() {
   const [openBiodata, setOpenBiodata] = useState(false)
@@ -32,13 +83,12 @@ export default function Dashboard() {
         const data = await laporanService.getAllLaporan()
         setLaporan(data)
         
-        // Hitung total saldo, pemasukan, dan pengeluaran
         let saldo = 0
         let pemasukan = 0
         let pengeluaran = 0
         
         data.forEach(item => {
-          saldo = item.total_saldo // Mengambil saldo terakhir
+          saldo = item.total_saldo
           pemasukan += item.pemasukan
           pengeluaran += item.pengeluaran
         })
@@ -76,136 +126,130 @@ export default function Dashboard() {
   return (
     <ThemeProvider theme={theme}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, padding: { xs: '16px', sm: '24px', md: '32px' } }}>
-        
-        {/* Navbar dengan Profile - Hapus bagian ini */}
-        {/* <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 32px', backgroundColor: 'transparent' }}>
-        </Box> */}
-
-        {/* Purple Gradient Card */}
-        <Card variant="purple-gradient">
-          <Box sx={{
-            display: 'flex',
-            flexDirection: { xs: 'column', sm: 'row' },
-            justifyContent: 'space-between',
-            position: 'relative',
-            background: 'linear-gradient(150deg, #0284c7 0%, #0ea5e9 100%)',
-            borderRadius: '10px',
-            padding: '16px',
-            height: 'auto',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              width: '100%',
-              height: '100%',
-              background: 'radial-gradient(circle at top right, rgba(255,255,255,0.2) 0%, transparent 60%)',
-              opacity: 0.6,
-              zIndex: -1,
-            },
-          }}>
-            <Box sx={{ flex: 1 }}>
+        {/* Welcome Card */}
+        <StyledCard variant="purple">
+          <ContentWrapper>
+            <Box>
               <Typography variant="h3" sx={{
                 fontWeight: 700,
                 fontSize: { xs: '1.5rem', sm: '2.5rem' },
-                mb: 2,
-                color: 'white',
+                mb: 2
               }}>
-                Selamat Datang ...
+                Selamat Datang di Sistem Bendahara
               </Typography>
               <Typography variant="h6" sx={{
                 fontWeight: 400,
                 opacity: 0.8,
-                color: 'white',
+                mb: 4
               }}>
-                Bendahara Desa 
+                Kelola keuangan desa dengan lebih mudah dan efisien
               </Typography>
-              <Box sx={{ mt: 4 }}>
-                <Typography sx={{
-                  fontSize: '100%',
-                  opacity: 0.9,
-                  color: 'white',
-                }}>
-                  Total Kas Desa
-                </Typography>
-                <Typography variant="h4" sx={{
-                  fontWeight: 700,
-                  color: 'white',
-                  mt: 1,
-                }}>
-                  {formatCurrency(totalSaldo)}
-                </Typography>
-              </Box>
+              <Typography sx={{ fontSize: '100%', opacity: 0.9 }}>
+                Total Kas Desa
+              </Typography>
+              <Typography variant="h4" sx={{ fontWeight: 700, mt: 1 }}>
+                {formatCurrency(totalSaldo)}
+              </Typography>
             </Box>
-          </Box>
-        </Card>
+          </ContentWrapper>
+          <IconWrapper>
+            <AccountBalanceWalletIcon sx={{ fontSize: '180px' }} />
+          </IconWrapper>
+        </StyledCard>
 
         {/* Stats Cards */}
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6} md={4}>
-            <StatsCard
-              title="Uang Kas"
-              value={formatCurrency(totalSaldo)}
-              trend={totalSaldo >= 0 ? "up" : "down"}
-              icon={<AccountBalanceWalletIcon />}
-            />
+            <StyledCard variant="blue">
+              <ContentWrapper>
+                <Typography variant="subtitle1" sx={{ opacity: 0.8, mb: 1 }}>
+                  Total Kas
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                  {formatCurrency(totalSaldo)}
+                </Typography>
+              </ContentWrapper>
+              <IconWrapper>
+                <AccountBalanceWalletIcon sx={{ fontSize: '120px' }} />
+              </IconWrapper>
+            </StyledCard>
           </Grid>
           <Grid item xs={12} sm={6} md={4}>
-            <StatsCard
-              title="Total Uang Masuk"
-              value={formatCurrency(totalPemasukan)}
-              trend="up"
-              icon={<TrendingUpIcon />}
-            />
+            <StyledCard variant="green">
+              <ContentWrapper>
+                <Typography variant="subtitle1" sx={{ opacity: 0.8, mb: 1 }}>
+                  Total Pemasukan
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                  {formatCurrency(totalPemasukan)}
+                </Typography>
+              </ContentWrapper>
+              <IconWrapper>
+                <TrendingUpIcon sx={{ fontSize: '120px' }} />
+              </IconWrapper>
+            </StyledCard>
           </Grid>
           <Grid item xs={12} sm={6} md={4}>
-            <StatsCard
-              title="Total Uang Keluar"
-              value={formatCurrency(totalPengeluaran)}
-              trend="down"
-              icon={<TrendingDownIcon />}
-            />
+            <StyledCard variant="red">
+              <ContentWrapper>
+                <Typography variant="subtitle1" sx={{ opacity: 0.8, mb: 1 }}>
+                  Total Pengeluaran
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                  {formatCurrency(totalPengeluaran)}
+                </Typography>
+              </ContentWrapper>
+              <IconWrapper>
+                <TrendingDownIcon sx={{ fontSize: '120px' }} />
+              </IconWrapper>
+            </StyledCard>
           </Grid>
         </Grid>
 
         {/* History Section */}
-        <Card>
+        <HistoryCard>
           <CardHeader
-            title="History Transaksi"
+            title={
+              <Typography variant="h5" sx={{ fontWeight: 600, color: '#1a237e' }}>
+                History Transaksi
+              </Typography>
+            }
             action={<SearchHistory placeholder="Cari transaksi..." />}
+            sx={{ borderBottom: '1px solid #eee', p: 3 }}
           />
-          <CardBody>
+          <CardBody sx={{ p: 0 }}>
             <Box sx={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: `1px solid ${colors.divider}` }}>
-                    <th style={{ padding: '12px 16px', textAlign: 'left' }}>Tanggal</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left' }}>Keterangan</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left' }}>Jenis</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right' }}>Jumlah</th>
+                  <tr style={{ backgroundColor: '#f8f9fa' }}>
+                    <th style={{ padding: '16px', textAlign: 'left', color: '#1a237e', fontWeight: 600 }}>Tanggal</th>
+                    <th style={{ padding: '16px', textAlign: 'left', color: '#1a237e', fontWeight: 600 }}>Keterangan</th>
+                    <th style={{ padding: '16px', textAlign: 'left', color: '#1a237e', fontWeight: 600 }}>Jenis</th>
+                    <th style={{ padding: '16px', textAlign: 'right', color: '#1a237e', fontWeight: 600 }}>Jumlah</th>
                   </tr>
                 </thead>
                 <tbody>
                   {laporan.map((item, index) => (
-                    <tr key={index} style={{ borderBottom: `1px solid ${colors.divider}` }}>
-                      <td style={{ padding: '12px 16px' }}>{item.tanggal}</td>
-                      <td style={{ padding: '12px 16px' }}>{item.keterangan}</td>
-                      <td style={{ padding: '12px 16px' }}>
+                    <tr key={index} style={{ borderBottom: '1px solid #eee' }}>
+                      <td style={{ padding: '16px' }}>{item.tanggal}</td>
+                      <td style={{ padding: '16px' }}>{item.keterangan}</td>
+                      <td style={{ padding: '16px' }}>
                         <Box sx={{
                           display: 'inline-block',
                           px: 2,
                           py: 0.5,
                           borderRadius: '6px',
-                          bgcolor: item.pengeluaran > 0 ? colors.error.light : colors.success.light,
-                          color: item.pengeluaran > 0 ? colors.error.dark : colors.success.dark,
+                          bgcolor: item.pengeluaran > 0 ? 'rgba(211, 47, 47, 0.1)' : 'rgba(46, 125, 50, 0.1)',
+                          color: item.pengeluaran > 0 ? '#d32f2f' : '#2e7d32',
+                          fontWeight: 500
                         }}>
                           {item.pengeluaran > 0 ? 'Pengeluaran' : 'Pemasukan'}
                         </Box>
                       </td>
                       <td style={{
-                        padding: '12px 16px',
+                        padding: '16px',
                         textAlign: 'right',
-                        color: item.pengeluaran > 0 ? colors.error.main : colors.success.main,
+                        color: item.pengeluaran > 0 ? '#d32f2f' : '#2e7d32',
                         fontWeight: 600,
                       }}>
                         {item.pengeluaran > 0 
@@ -215,11 +259,18 @@ export default function Dashboard() {
                       </td>
                     </tr>
                   ))}
+                  {laporan.length === 0 && (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center', padding: '32px', color: '#666' }}>
+                        Belum ada data transaksi
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </Box>
           </CardBody>
-        </Card>
+        </HistoryCard>
 
         {/* Biodata Modal */}
         <Dialog open={openBiodata} onClose={handleClose} sx={{

@@ -1,4 +1,5 @@
 import { API_BASE_URL, API_ENDPOINTS, getHeaders } from '@/config/api';
+import Cookies from 'js-cookie';
 
 export const authService = {
     login: async (username, password) => {
@@ -40,8 +41,10 @@ export const authService = {
             // Jika login berhasil
             const { token, user } = responseData.data;
             
-            // Simpan token dan data user
-            localStorage.setItem('token', token);
+            // Simpan token di cookies dengan expiry 1 hari
+            Cookies.set('authToken', token, { expires: 1 });
+            
+            // Simpan user data di localStorage
             localStorage.setItem('user', JSON.stringify(user));
 
             return {

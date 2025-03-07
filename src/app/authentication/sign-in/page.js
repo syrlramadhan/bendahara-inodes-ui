@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import {
   Box,
@@ -25,6 +26,7 @@ export default function SignIn() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const router = useRouter()
   const { login } = useAuth()
 
   const handleChange = (e) => {
@@ -51,7 +53,9 @@ export default function SignIn() {
     try {
       const result = await login(formData.username, formData.password)
       
-      if (!result.success) {
+      if (result.success) {
+        router.push('/dashboard')
+      } else {
         setError(result.error || 'Login gagal. Silakan coba lagi.')
       }
     } catch (error) {
