@@ -201,18 +201,19 @@ export default function LaporanKeuangan() {
   const [error, setError] = useState(null)
   const [anchorEl, setAnchorEl] = useState(null)
   const open = Boolean(anchorEl)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [refreshKey])
 
   const fetchData = async () => {
     try {
       setLoading(true)
       setError(null)
       const response = await laporanService.getAllLaporan()
-      console.log('Fetched data:', response) // Debugging
-      setData(response)
+      console.log('Fetched data:', response)
+      setData(response || [])
     } catch (error) {
       console.error('Error fetching data:', error)
       setError('Gagal mengambil data laporan: ' + error.message)
@@ -338,10 +339,15 @@ export default function LaporanKeuangan() {
     handleClose()
   }
 
+  // Fungsi untuk refresh data
+  const refreshData = () => {
+    setRefreshKey(oldKey => oldKey + 1)
+  }
+
   // Update calculations
-  const totalPemasukan = data.reduce((sum, item) => sum + (parseInt(item.pemasukan) || 0), 0)
-  const totalPengeluaran = data.reduce((sum, item) => sum + (parseInt(item.pengeluaran) || 0), 0)
-  const saldoAkhir = totalPemasukan - totalPengeluaran
+  const totalPemasukan = data.reduce((sum, item) => sum + (item.pemasukan || 0), 0)
+  const totalPengeluaran = data.reduce((sum, item) => sum + (item.pengeluaran || 0), 0)
+  const saldoAkhir = data.length > 0 ? data[0].total_saldo : 0
 
   return (
     <AnimatedContainer maxWidth="lg" sx={{ 
@@ -372,14 +378,23 @@ export default function LaporanKeuangan() {
             >
               Laporan Keuangan
             </AnimatedTypography>
-            <StyledButton
-              variant="contained"
-              startIcon={<FileDownloadIcon />}
-              onClick={handleClick}
-              sx={{ '@media print': { display: 'none' } }}
-            >
-              Unduh Laporan
-            </StyledButton>
+            <Box>
+              <Button
+                variant="outlined"
+                onClick={refreshData}
+                sx={{ mr: 2 }}
+              >
+                Refresh Data
+              </Button>
+              <StyledButton
+                variant="contained"
+                startIcon={<FileDownloadIcon />}
+                onClick={handleClick}
+                sx={{ '@media print': { display: 'none' } }}
+              >
+                Unduh Laporan
+              </StyledButton>
+            </Box>
             <Menu
               anchorEl={anchorEl}
               open={open}
@@ -454,7 +469,7 @@ export default function LaporanKeuangan() {
                   <TableCell>Kategori</TableCell>
                   <TableCell>Keterangan</TableCell>
                   <TableCell align="right">Nominal</TableCell>
-                  <TableCell align="right">Jenis</TableCell>
+                  <TableCell align="right">Saldo</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -463,11 +478,20 @@ export default function LaporanKeuangan() {
                     <TableCell>{row.tanggal}</TableCell>
                     <TableCell>{row.kategori}</TableCell>
                     <TableCell>{row.keterangan}</TableCell>
-                    <TableCell align="right">
-                      {formatRupiah(row.pemasukan)}
+                    <TableCell 
+                      align="right"
+                      sx={{ 
+                        color: row.pemasukan > 0 ? 'success.main' : 'error.main',
+                        fontWeight: 600
+                      }}
+                    >
+                      {row.pemasukan > 0 
+                        ? `+ ${formatRupiah(row.pemasukan)}`
+                        : `- ${formatRupiah(row.pengeluaran)}`
+                      }
                     </TableCell>
-                    <TableCell align="right">
-                      {row.kategori}
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>
+                      {formatRupiah(row.total_saldo)}
                     </TableCell>
                   </TableRow>
                 ))}

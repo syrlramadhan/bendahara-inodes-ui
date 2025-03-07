@@ -9,36 +9,129 @@ export const laporanService = {
                 throw new Error('Token tidak ditemukan');
             }
 
-            const response = await fetch(`${API_BASE_URL}/pemasukan/getall`, {
+            // Ambil data pemasukan
+            const pemasukanResponse = await fetch(`/api/pemasukan/getall`, {
                 method: 'GET',
                 headers: {
                     ...getHeaders(token),
                     'ngrok-skip-browser-warning': 'true'
                 },
-                credentials: 'same-origin'
+                credentials: 'include'
+            });
+
+            // Ambil data pengeluaran
+            const pengeluaranResponse = await fetch(`/api/pengeluaran/getall`, {
+                method: 'GET',
+                headers: {
+                    ...getHeaders(token),
+                    'ngrok-skip-browser-warning': 'true'
+                },
+                credentials: 'include'
             });
             
-            if (!response.ok) {
-                throw new Error('Gagal mengambil data pemasukan');
+            if (!pemasukanResponse.ok || !pengeluaranResponse.ok) {
+                throw new Error('Gagal mengambil data');
             }
             
-            const result = await response.json();
-            console.log('API Response:', result); // Debugging
-            
-            if (result.status === "OK" && Array.isArray(result.data)) {
-                return result.data.map(item => ({
+            const pemasukanData = await pemasukanResponse.json();
+            const pengeluaranData = await pengeluaranResponse.json();
+
+            console.log('Pemasukan:', pemasukanData);
+            console.log('Pengeluaran:', pengeluaranData);
+
+            // Gabungkan dan urutkan data berdasarkan tanggal
+            const combinedData = [
+                ...(pemasukanData.data || []).map(item => ({
                     tanggal: item.tanggal,
                     keterangan: item.keterangan,
                     kategori: item.kategori,
-                    pemasukan: item.nominal,
+                    pemasukan: parseInt(item.nominal) || 0,
                     pengeluaran: 0,
-                    total_saldo: item.nominal // Sementara menggunakan nominal sebagai saldo
-                }));
-            }
-            
-            return [];
+                    jenis: 'Pemasukan'
+                })),
+                ...(pengeluaranData.data || []).map(item => ({
+                    tanggal: item.tanggal,
+                    keterangan: item.keterangan,
+                    kategori: item.kategori,
+                    pemasukan: 0,
+                    pengeluaran: parseInt(item.nominal) || 0,
+                    jenis: 'Pengeluaran'
+                }))
+            ].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+
+            // Hitung saldo berjalan
+            let saldo = 0;
+            const dataWithSaldo = combinedData.map(item => {
+                saldo += (item.pemasukan - item.pengeluaran);
+                return {
+                    ...item,
+                    total_saldo: saldo
+                };
+            });
+
+            return dataWithSaldo;
         } catch (error) {
-            console.error('Error fetching pemasukan:', error);
+            console.error('Error fetching data:', error);
+            throw error;
+        }
+    },
+
+    addPemasukan: async (data) => {
+        try {
+            const token = Cookies.get('authToken');
+            if (!token) {
+                throw new Error('Token tidak ditemukan');
+            }
+
+            const response = await fetch(`/api/pemasukan/add`, {
+                method: 'POST',
+                headers: {
+                    ...getHeaders(token),
+                    'ngrok-skip-browser-warning': 'true'
+                },
+                credentials: 'include',
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Gagal menambah pemasukan');
+            }
+
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Error adding pemasukan:', error);
+            throw error;
+        }
+    },
+
+    addPengeluaran: async (data) => {
+        try {
+            const token = Cookies.get('authToken');
+            if (!token) {
+                throw new Error('Token tidak ditemukan');
+            }
+
+            const response = await fetch(`/api/pengeluaran/add`, {
+                method: 'POST',
+                headers: {
+                    ...getHeaders(token),
+                    'ngrok-skip-browser-warning': 'true'
+                },
+                credentials: 'include',
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Gagal menambah pengeluaran');
+            }
+
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Error adding pengeluaran:', error);
             throw error;
         }
     },
