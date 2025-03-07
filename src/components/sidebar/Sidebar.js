@@ -105,7 +105,6 @@ const menuItems = [
   { title: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
   { title: 'Pemasukan', icon: <TrendingUpIcon />, path: '/pemasukan' },
   { title: 'Pengeluaran', icon: <TrendingDownIcon />, path: '/pengeluaran' },
-  { title: 'Kas Desa', icon: <AccountBalanceIcon />, path: '/kas-desa' },
   { title: 'Laporan', icon: <AssessmentIcon />, path: '/laporan' },
 ];
 
