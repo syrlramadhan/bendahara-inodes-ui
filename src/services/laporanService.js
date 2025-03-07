@@ -42,6 +42,7 @@ export const laporanService = {
             // Gabungkan dan urutkan data berdasarkan tanggal
             const combinedData = [
                 ...(pemasukanData.data || []).map(item => ({
+                    id: item.id,
                     tanggal: item.tanggal,
                     keterangan: item.keterangan,
                     kategori: item.kategori,
@@ -50,12 +51,14 @@ export const laporanService = {
                     jenis: 'Pemasukan'
                 })),
                 ...(pengeluaranData.data || []).map(item => ({
+                    id: item.id,
                     tanggal: item.tanggal,
                     keterangan: item.keterangan,
                     kategori: item.kategori,
                     pemasukan: 0,
                     pengeluaran: parseInt(item.nominal) || 0,
-                    jenis: 'Pengeluaran'
+                    jenis: 'Pengeluaran',
+                    nota: item.nota
                 }))
             ].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
 
@@ -83,22 +86,47 @@ export const laporanService = {
                 throw new Error('Token tidak ditemukan');
             }
 
+            // Bersihkan dan validasi data
+            const nominal = data.nominal.toString().replace(/[^0-9]/g, '');
+            if (!nominal) {
+                throw new Error('Nominal harus berupa angka');
+            }
+
+            const formData = new FormData();
+            formData.append('tanggal', data.tanggal);
+            formData.append('nominal', nominal);
+            formData.append('keterangan', data.keterangan);
+
+            console.log('Sending data:', {
+                tanggal: data.tanggal,
+                nominal: nominal,
+                keterangan: data.keterangan
+            });
+
             const response = await fetch(`/api/pemasukan/add`, {
                 method: 'POST',
                 headers: {
-                    ...getHeaders(token),
+                    'Authorization': `Bearer ${token}`,
                     'ngrok-skip-browser-warning': 'true'
                 },
-                credentials: 'include',
-                body: JSON.stringify(data)
+                body: formData
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Gagal menambah pemasukan');
+            const responseText = await response.text();
+            console.log('Response text:', responseText);
+            
+            let result;
+            try {
+                result = JSON.parse(responseText);
+            } catch (error) {
+                console.error('Error parsing response:', error);
+                throw new Error('Format response tidak valid');
             }
 
-            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.message || 'Gagal menambah pemasukan');
+            }
+
             return result;
         } catch (error) {
             console.error('Error adding pemasukan:', error);
@@ -113,22 +141,40 @@ export const laporanService = {
                 throw new Error('Token tidak ditemukan');
             }
 
+            const formData = new FormData();
+            formData.append('tanggal', data.tanggal);
+            formData.append('nominal', data.nominal);
+            formData.append('keterangan', data.keterangan);
+            
+            // Pastikan ada file nota yang dipilih
+            if (!data.nota) {
+                throw new Error('Nota harus diupload');
+            }
+            formData.append('nota', data.nota);
+
             const response = await fetch(`/api/pengeluaran/add`, {
                 method: 'POST',
                 headers: {
-                    ...getHeaders(token),
+                    'Authorization': `Bearer ${token}`,
                     'ngrok-skip-browser-warning': 'true'
                 },
-                credentials: 'include',
-                body: JSON.stringify(data)
+                body: formData
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Gagal menambah pengeluaran');
+            const responseText = await response.text();
+            let result;
+            
+            try {
+                result = JSON.parse(responseText);
+            } catch (error) {
+                console.error('Response text:', responseText);
+                throw new Error('Format response tidak valid');
             }
 
-            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.message || 'Gagal menambah pengeluaran');
+            }
+
             return result;
         } catch (error) {
             console.error('Error adding pengeluaran:', error);
@@ -156,22 +202,44 @@ export const laporanService = {
         }
     },
 
-    updateLaporan: async (id, laporanData) => {
+    updateLaporan: async (id, data) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/laporan/update/${id}`, {
+            const token = Cookies.get('authToken');
+            if (!token) {
+                throw new Error('Token tidak ditemukan');
+            }
+
+            const formData = new FormData();
+            formData.append('tanggal', data.tanggal);
+            formData.append('nominal', data.nominal);
+            formData.append('keterangan', data.keterangan);
+
+            let endpoint = '';
+            if (data.jenis === 'Pemasukan') {
+                endpoint = `/api/pemasukan/update/${id}`;
+            } else {
+                endpoint = `/api/pengeluaran/update/${id}`;
+            }
+
+            const response = await fetch(endpoint, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'ngrok-skip-browser-warning': 'true'
                 },
-                body: JSON.stringify(laporanData),
+                body: formData,
+                credentials: 'include'
             });
+
             if (!response.ok) {
-                throw new Error('Failed to update laporan');
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Gagal mengupdate data');
             }
-            const data = await response.json();
-            return data;
+
+            const result = await response.json();
+            return result;
         } catch (error) {
-            console.error('Error updating laporan:', error);
+            console.error('Error updating data:', error);
             throw error;
         }
     },

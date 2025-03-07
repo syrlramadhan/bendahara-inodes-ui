@@ -150,6 +150,7 @@ export default function Pemasukan() {
     }
 
     try {
+      setLoading(true)
       const data = {
         tanggal: formData.tanggal,
         nominal: formData.nominal,
@@ -157,7 +158,10 @@ export default function Pemasukan() {
       }
 
       if (editingId) {
-        await laporanService.updateLaporan(editingId, data)
+        await laporanService.updateLaporan(editingId, {
+          ...data,
+          jenis: 'Pemasukan'
+        })
         showAlertMessage('Data berhasil diperbarui', 'success')
       } else {
         await laporanService.addPemasukan(data)
@@ -168,7 +172,9 @@ export default function Pemasukan() {
       fetchData()
     } catch (error) {
       console.error('Error saving data:', error)
-      showAlertMessage('Gagal menyimpan data', 'error')
+      showAlertMessage(error.message || 'Gagal menyimpan data', 'error')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -232,8 +238,21 @@ export default function Pemasukan() {
       </HeaderBox>
 
       <StyledCard>
-        <CardContent sx={{ p: 0 }}>
-          <StyledTableContainer>
+        <CardContent>
+          <Typography variant="h4" component="div" sx={{ mb: 2 }}>
+            Data Pemasukan
+          </Typography>
+          <Typography variant="body1" sx={{ mb: 3 }}>
+            Kelola data pemasukan desa dengan mudah
+          </Typography>
+          <Button 
+            variant="contained" 
+            onClick={handleAdd}
+            sx={{ mb: 3 }}
+          >
+            Tambah Pemasukan
+          </Button>
+          <TableContainer>
             <Table>
               <TableHead>
                 <TableRow>
@@ -263,7 +282,7 @@ export default function Pemasukan() {
                 ) : (
                   rows.map((row, index) => (
                     <TableRow 
-                      key={row.id} 
+                      key={`${row.tanggal}-${index}`} 
                       sx={{ 
                         '&:hover': { 
                           bgcolor: '#f8f9fa',
@@ -312,7 +331,7 @@ export default function Pemasukan() {
                 )}
               </TableBody>
             </Table>
-          </StyledTableContainer>
+          </TableContainer>
         </CardContent>
       </StyledCard>
 

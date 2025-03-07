@@ -1,4 +1,5 @@
 export const API_BASE_URL = 'https://6fba-140-213-217-131.ngrok-free.app/api';
+export const UPLOAD_URL = 'https://6fba-140-213-217-131.ngrok-free.app/api/uploads/';
 
 export const API_ENDPOINTS = {
     // Admin endpoints

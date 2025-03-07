@@ -24,14 +24,17 @@ import {
   Divider,
   Alert,
   Fade,
-  CircularProgress
+  CircularProgress,
+  Avatar
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
 import MoneyOffIcon from '@mui/icons-material/MoneyOff'
+import ReceiptIcon from '@mui/icons-material/Receipt'
 import { styled } from '@mui/material/styles'
 import { laporanService } from '@/services/laporanService'
+import { UPLOAD_URL } from '@/config/api'
 
 // Styled components
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -70,12 +73,14 @@ export default function Pengeluaran() {
   const [formData, setFormData] = useState({
     tanggal: '',
     nominal: '',
-    keterangan: ''
+    keterangan: '',
+    nota: null
   })
   const [showAlert, setShowAlert] = useState(false)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertType, setAlertType] = useState('success')
   const [loading, setLoading] = useState(true)
+  const [previewUrl, setPreviewUrl] = useState('')
 
   useEffect(() => {
     fetchData()
@@ -96,11 +101,24 @@ export default function Pengeluaran() {
   }
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+    const { name, value, files } = e.target
+    if (name === 'nota') {
+      const file = files[0]
+      setFormData(prev => ({
+        ...prev,
+        [name]: file
+      }))
+      // Buat preview URL untuk gambar
+      if (file) {
+        const url = URL.createObjectURL(file)
+        setPreviewUrl(url)
+      }
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }))
+    }
   }
 
   const handleAdd = () => {
@@ -108,8 +126,10 @@ export default function Pengeluaran() {
     setFormData({
       tanggal: '',
       nominal: '',
-      keterangan: ''
+      keterangan: '',
+      nota: null
     })
+    setPreviewUrl('')
     setShowModal(true)
   }
 
@@ -118,8 +138,15 @@ export default function Pengeluaran() {
     setFormData({
       tanggal: row.tanggal,
       nominal: row.pengeluaran,
-      keterangan: row.keterangan
+      keterangan: row.keterangan,
+      nota: null
     })
+    // Set preview URL jika ada nota
+    if (row.nota) {
+      setPreviewUrl(`${UPLOAD_URL}${row.nota}`)
+    } else {
+      setPreviewUrl('')
+    }
     setShowModal(true)
   }
 
@@ -149,15 +176,29 @@ export default function Pengeluaran() {
       return
     }
 
+    // Validasi nota untuk penambahan data baru
+    if (!editingId && !formData.nota) {
+      showAlertMessage('Nota harus diupload', 'error')
+      return
+    }
+
     try {
       const data = {
         tanggal: formData.tanggal,
         nominal: formData.nominal,
-        keterangan: formData.keterangan
+        keterangan: formData.keterangan,
+        nota: formData.nota
       }
 
       if (editingId) {
-        await laporanService.updateLaporan(editingId, data)
+        // Jika edit dan ada nota baru
+        if (formData.nota) {
+          await laporanService.updateLaporan(editingId, data)
+        } else {
+          // Jika edit tanpa mengubah nota
+          const { nota, ...dataWithoutNota } = data
+          await laporanService.updateLaporan(editingId, dataWithoutNota)
+        }
         showAlertMessage('Data berhasil diperbarui', 'success')
       } else {
         await laporanService.addPengeluaran(data)
@@ -168,7 +209,7 @@ export default function Pengeluaran() {
       fetchData()
     } catch (error) {
       console.error('Error saving data:', error)
-      showAlertMessage('Gagal menyimpan data', 'error')
+      showAlertMessage(error.message || 'Gagal menyimpan data', 'error')
     }
   }
 
@@ -182,6 +223,11 @@ export default function Pengeluaran() {
   }
 
   const totalPengeluaran = rows.reduce((sum, row) => sum + (row.pengeluaran || 0), 0)
+
+  const handleClose = () => {
+    setShowModal(false)
+    setPreviewUrl('')
+  }
 
   return (
     <Box sx={{ padding: '24px' }}>
@@ -232,8 +278,21 @@ export default function Pengeluaran() {
       </HeaderBox>
 
       <StyledCard>
-        <CardContent sx={{ p: 0 }}>
-          <StyledTableContainer>
+        <CardContent>
+          <Typography variant="h4" component="div" sx={{ mb: 2 }}>
+            Data Pengeluaran
+          </Typography>
+          <Typography variant="body1" sx={{ mb: 3 }}>
+            Kelola data pengeluaran desa dengan mudah
+          </Typography>
+          <Button 
+            variant="contained" 
+            onClick={handleAdd}
+            sx={{ mb: 3 }}
+          >
+            Tambah Pengeluaran
+          </Button>
+          <TableContainer>
             <Table>
               <TableHead>
                 <TableRow>
@@ -241,19 +300,20 @@ export default function Pengeluaran() {
                   <TableCell>Tanggal</TableCell>
                   <TableCell>Jumlah</TableCell>
                   <TableCell>Keterangan</TableCell>
+                  <TableCell>Nota</TableCell>
                   <TableCell align="center">Aksi</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                    <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                       <CircularProgress />
                     </TableCell>
                   </TableRow>
                 ) : rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                    <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                       <MoneyOffIcon sx={{ fontSize: 48, color: '#ccc', mb: 2 }} />
                       <Typography variant="body1" color="textSecondary">
                         Belum ada data pengeluaran
@@ -263,7 +323,7 @@ export default function Pengeluaran() {
                 ) : (
                   rows.map((row, index) => (
                     <TableRow 
-                      key={row.id} 
+                      key={`${row.tanggal}-${index}`} 
                       sx={{ 
                         '&:hover': { 
                           bgcolor: '#f8f9fa',
@@ -279,6 +339,21 @@ export default function Pengeluaran() {
                         {formatCurrency(row.pengeluaran)}
                       </TableCell>
                       <TableCell>{row.keterangan}</TableCell>
+                      <TableCell>
+                        {row.nota ? (
+                          <IconButton
+                            size="small"
+                            onClick={() => window.open(`${UPLOAD_URL}${row.nota}`, '_blank')}
+                            sx={{ color: '#1a237e' }}
+                          >
+                            <ReceiptIcon />
+                          </IconButton>
+                        ) : (
+                          <Typography variant="caption" color="text.secondary">
+                            Tidak ada nota
+                          </Typography>
+                        )}
+                      </TableCell>
                       <TableCell align="center">
                         <Box 
                           className="action-buttons"
@@ -312,13 +387,13 @@ export default function Pengeluaran() {
                 )}
               </TableBody>
             </Table>
-          </StyledTableContainer>
+          </TableContainer>
         </CardContent>
       </StyledCard>
 
       <Dialog 
         open={showModal} 
-        onClose={() => setShowModal(false)}
+        onClose={handleClose}
         maxWidth="sm"
         fullWidth
         PaperProps={{
@@ -367,11 +442,55 @@ export default function Pengeluaran() {
             fullWidth
             multiline
             rows={3}
+            sx={{ mb: 2 }}
           />
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle1" sx={{ mb: 1 }}>
+              Upload Nota *
+            </Typography>
+            <input
+              accept="image/*"
+              type="file"
+              name="nota"
+              onChange={handleInputChange}
+              style={{ display: 'none' }}
+              id="nota-upload"
+            />
+            <label htmlFor="nota-upload">
+              <Button
+                variant="outlined"
+                component="span"
+                fullWidth
+                sx={{
+                  borderColor: '#ddd',
+                  color: '#666',
+                  '&:hover': {
+                    borderColor: '#1a237e',
+                    color: '#1a237e'
+                  }
+                }}
+              >
+                {formData.nota ? formData.nota.name : 'Pilih File Nota'}
+              </Button>
+            </label>
+            {previewUrl && (
+              <Box sx={{ mt: 2, textAlign: 'center' }}>
+                <img 
+                  src={previewUrl}
+                  alt="Preview Nota"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '200px',
+                    borderRadius: '8px'
+                  }}
+                />
+              </Box>
+            )}
+          </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #eee' }}>
           <Button 
-            onClick={() => setShowModal(false)} 
+            onClick={handleClose}
             sx={{ 
               color: '#666',
               '&:hover': { bgcolor: '#f5f5f5' }
@@ -380,7 +499,7 @@ export default function Pengeluaran() {
             Batal
           </Button>
           <Button 
-            onClick={handleSave} 
+            onClick={handleSave}
             variant="contained"
             sx={{ 
               bgcolor: '#1a237e',

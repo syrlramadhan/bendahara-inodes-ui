@@ -147,17 +147,23 @@ export default function Dashboard() {
               }}>
                 Selamat Datang di Sistem Bendahara
               </Typography>
-              <Typography variant="h6" component="div" sx={{
+              <Typography variant="body1" sx={{
                 fontWeight: 400,
                 opacity: 0.8,
                 mb: 4
               }}>
                 Kelola keuangan desa dengan lebih mudah dan efisien
               </Typography>
-              <Typography component="div" sx={{ fontSize: '100%', opacity: 0.9 }}>
+              <Typography variant="body2" sx={{ 
+                fontSize: '100%', 
+                opacity: 0.9 
+              }}>
                 Total Kas Desa
               </Typography>
-              <Typography variant="h4" component="div" sx={{ fontWeight: 700, mt: 1 }}>
+              <Typography variant="h4" component="div" sx={{ 
+                fontWeight: 700, 
+                mt: 1 
+              }}>
                 {formatCurrency(totalSaldo)}
               </Typography>
             </Box>
