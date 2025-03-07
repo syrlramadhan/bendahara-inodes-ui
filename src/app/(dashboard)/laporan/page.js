@@ -20,7 +20,8 @@ import {
   Fade,
   Grow,
   styled,
-  keyframes
+  keyframes,
+  CircularProgress
 } from '@mui/material'
 import { 
   FileDownload as FileDownloadIcon,
@@ -35,6 +36,7 @@ import { colors } from '@/styles/colors'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
+import { laporanService } from '@/services/laporanService'
 
 // Data dummy untuk contoh
 const dummyData = [
@@ -194,8 +196,30 @@ const StyledButton = styled(Button)(({ theme }) => ({
 }));
 
 export default function LaporanKeuangan() {
+  const [data, setData] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [anchorEl, setAnchorEl] = useState(null)
   const open = Boolean(anchorEl)
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await laporanService.getAllLaporan()
+      console.log('Fetched data:', response) // Debugging
+      setData(response)
+    } catch (error) {
+      console.error('Error fetching data:', error)
+      setError('Gagal mengambil data laporan: ' + error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget)
@@ -233,15 +257,15 @@ export default function LaporanKeuangan() {
       doc.text(`Saldo Akhir: ${formatRupiah(saldoAkhir)}`, 14, 49)
       
       // Tabel
-      const tableData = dummyData.map(row => [
+      const tableData = data.map(row => [
         row.tanggal,
         row.keterangan,
-        formatRupiah(row.debit),
-        formatRupiah(row.kredit),
-        formatRupiah(row.saldo)
+        formatRupiah(row.pemasukan || 0),
+        formatRupiah(row.pengeluaran || 0),
+        formatRupiah(row.total_saldo || 0)
       ])
 
-      const tableColumns = ['Tanggal', 'Keterangan', 'Debit', 'Kredit', 'Saldo']
+      const tableColumns = ['Tanggal', 'Keterangan', 'Pemasukan', 'Pengeluaran', 'Saldo']
 
       autoTable(doc, {
         head: [tableColumns],
@@ -290,20 +314,20 @@ export default function LaporanKeuangan() {
 
   // Fungsi untuk export Excel
   const exportToExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(dummyData.map(row => ({
+    const ws = XLSX.utils.json_to_sheet(data.map(row => ({
       Tanggal: row.tanggal,
       Keterangan: row.keterangan,
-      Debit: row.debit,
-      Kredit: row.kredit,
-      Saldo: row.saldo
+      Pemasukan: row.pemasukan,
+      Pengeluaran: row.pengeluaran,
+      Saldo: row.total_saldo
     })))
     
     // Set lebar kolom
     const colWidths = [
       { wch: 12 }, // Tanggal
       { wch: 30 }, // Keterangan
-      { wch: 15 }, // Debit
-      { wch: 15 }, // Kredit
+      { wch: 15 }, // Pemasukan
+      { wch: 15 }, // Pengeluaran
       { wch: 15 }  // Saldo
     ]
     ws['!cols'] = colWidths
@@ -314,9 +338,9 @@ export default function LaporanKeuangan() {
     handleClose()
   }
 
-  // Hitung total
-  const totalPemasukan = dummyData.reduce((sum, item) => sum + item.debit, 0)
-  const totalPengeluaran = dummyData.reduce((sum, item) => sum + item.kredit, 0)
+  // Update calculations
+  const totalPemasukan = data.reduce((sum, item) => sum + (parseInt(item.pemasukan) || 0), 0)
+  const totalPengeluaran = data.reduce((sum, item) => sum + (parseInt(item.pengeluaran) || 0), 0)
   const saldoAkhir = totalPemasukan - totalPengeluaran
 
   return (
@@ -327,154 +351,140 @@ export default function LaporanKeuangan() {
       borderRadius: '16px',
       padding: '24px'
     }}>
-      <div id="print-content">
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-          <AnimatedTypography 
-            variant="h4" 
-            sx={{
-              fontWeight: 600,
-              color: theme => theme.palette.mode === 'dark' ? '#42A5F5' : '#1976D2',
-              textShadow: theme => theme.palette.mode === 'dark' ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
-            }}
-          >
-            Laporan Keuangan
-          </AnimatedTypography>
-          <StyledButton
-            variant="contained"
-            startIcon={<FileDownloadIcon />}
-            onClick={handleClick}
-            sx={{ '@media print': { display: 'none' } }}
-          >
-            Unduh Laporan
-          </StyledButton>
-          <Menu
-            anchorEl={anchorEl}
-            open={open}
-            onClose={handleClose}
-            sx={{ 
-              '@media print': { display: 'none' },
-              '& .MuiPaper-root': {
-                borderRadius: '12px',
-                boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
-              },
-            }}
-          >
-            <MenuItem onClick={generatePDF}>
-              <PdfIcon sx={{ mr: 1, color: '#f44336' }} /> Unduh PDF
-            </MenuItem>
-            <MenuItem onClick={exportToExcel}>
-              <ExcelIcon sx={{ mr: 1, color: '#4CAF50' }} /> Unduh Excel
-            </MenuItem>
-            <MenuItem onClick={handlePrint}>
-              <PrintIcon sx={{ mr: 1, color: '#2196F3' }} /> Cetak
-            </MenuItem>
-          </Menu>
+      {loading ? (
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress />
         </Box>
+      ) : error ? (
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+          <Typography color="error">{error}</Typography>
+        </Box>
+      ) : (
+        <div id="print-content">
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <AnimatedTypography 
+              variant="h4" 
+              sx={{
+                fontWeight: 600,
+                color: theme => theme.palette.mode === 'dark' ? '#42A5F5' : '#1976D2',
+                textShadow: theme => theme.palette.mode === 'dark' ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+              }}
+            >
+              Laporan Keuangan
+            </AnimatedTypography>
+            <StyledButton
+              variant="contained"
+              startIcon={<FileDownloadIcon />}
+              onClick={handleClick}
+              sx={{ '@media print': { display: 'none' } }}
+            >
+              Unduh Laporan
+            </StyledButton>
+            <Menu
+              anchorEl={anchorEl}
+              open={open}
+              onClose={handleClose}
+              sx={{ 
+                '@media print': { display: 'none' },
+                '& .MuiPaper-root': {
+                  borderRadius: '12px',
+                  boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
+                },
+              }}
+            >
+              <MenuItem onClick={generatePDF}>
+                <PdfIcon sx={{ mr: 1, color: '#f44336' }} /> Unduh PDF
+              </MenuItem>
+              <MenuItem onClick={exportToExcel}>
+                <ExcelIcon sx={{ mr: 1, color: '#4CAF50' }} /> Unduh Excel
+              </MenuItem>
+              <MenuItem onClick={handlePrint}>
+                <PrintIcon sx={{ mr: 1, color: '#2196F3' }} /> Cetak
+              </MenuItem>
+            </Menu>
+          </Box>
 
-        <Grid container spacing={3} mb={4}>
-          <Grid item xs={12} sm={4}>
-            <StyledCard variant="income" delay={0.2}>
-              <IconWrapper>
-                <TrendingUpIcon sx={{ fontSize: 48 }} />
-              </IconWrapper>
-              <Typography variant="subtitle1" sx={{ mb: 1, opacity: 0.8, position: 'relative', zIndex: 1 }}>
-                Total Pemasukan
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 600, position: 'relative', zIndex: 1 }}>
-                {formatRupiah(totalPemasukan)}
-              </Typography>
-            </StyledCard>
+          <Grid container spacing={3} mb={4}>
+            <Grid item xs={12} sm={4}>
+              <StyledCard variant="income" delay={0.2}>
+                <IconWrapper>
+                  <TrendingUpIcon sx={{ fontSize: 48 }} />
+                </IconWrapper>
+                <Typography variant="subtitle1" sx={{ mb: 1, opacity: 0.8, position: 'relative', zIndex: 1 }}>
+                  Total Pemasukan
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 600, position: 'relative', zIndex: 1 }}>
+                  {formatRupiah(totalPemasukan)}
+                </Typography>
+              </StyledCard>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <StyledCard variant="expense" delay={0.4}>
+                <IconWrapper>
+                  <TrendingDownIcon sx={{ fontSize: 48 }} />
+                </IconWrapper>
+                <Typography variant="subtitle1" sx={{ mb: 1, opacity: 0.8, position: 'relative', zIndex: 1 }}>
+                  Total Pengeluaran
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 600, position: 'relative', zIndex: 1 }}>
+                  {formatRupiah(totalPengeluaran)}
+                </Typography>
+              </StyledCard>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <StyledCard delay={0.6}>
+                <IconWrapper>
+                  <AccountBalanceIcon sx={{ fontSize: 48 }} />
+                </IconWrapper>
+                <Typography variant="subtitle1" sx={{ mb: 1, opacity: 0.8, position: 'relative', zIndex: 1 }}>
+                  Saldo Akhir
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 600, position: 'relative', zIndex: 1 }}>
+                  {formatRupiah(saldoAkhir)}
+                </Typography>
+              </StyledCard>
+            </Grid>
           </Grid>
-          <Grid item xs={12} sm={4}>
-            <StyledCard variant="expense" delay={0.4}>
-              <IconWrapper>
-                <TrendingDownIcon sx={{ fontSize: 48 }} />
-              </IconWrapper>
-              <Typography variant="subtitle1" sx={{ mb: 1, opacity: 0.8, position: 'relative', zIndex: 1 }}>
-                Total Pengeluaran
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 600, position: 'relative', zIndex: 1 }}>
-                {formatRupiah(totalPengeluaran)}
-              </Typography>
-            </StyledCard>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <StyledCard delay={0.6}>
-              <IconWrapper>
-                <AccountBalanceIcon sx={{ fontSize: 48 }} />
-              </IconWrapper>
-              <Typography variant="subtitle1" sx={{ mb: 1, opacity: 0.8, position: 'relative', zIndex: 1 }}>
-                Saldo Akhir
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 600, position: 'relative', zIndex: 1 }}>
-                {formatRupiah(saldoAkhir)}
-              </Typography>
-            </StyledCard>
-          </Grid>
-        </Grid>
 
-        <StyledTableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Tanggal</TableCell>
-                <TableCell>Keterangan</TableCell>
-                <TableCell align="right">Debit</TableCell>
-                <TableCell align="right">Kredit</TableCell>
-                <TableCell align="right">Saldo</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {dummyData.map((row, index) => (
-                <TableRow key={index}>
-                  <TableCell>{row.tanggal}</TableCell>
-                  <TableCell>{row.keterangan}</TableCell>
-                  <TableCell 
-                    align="right"
-                    sx={{ 
-                      color: theme => row.debit > 0 
-                        ? theme.palette.mode === 'dark' ? '#FFFFFF' : '#1976D2'
-                        : theme.palette.mode === 'dark' ? '#FFFFFF' : 'inherit',
-                      fontWeight: row.debit > 0 ? 600 : 400
-                    }}
-                  >
-                    {formatRupiah(row.debit)}
-                  </TableCell>
-                  <TableCell 
-                    align="right"
-                    sx={{ 
-                      color: theme => row.kredit > 0 
-                        ? theme.palette.mode === 'dark' ? '#FFFFFF' : '#1976D2'
-                        : theme.palette.mode === 'dark' ? '#FFFFFF' : 'inherit',
-                      fontWeight: row.kredit > 0 ? 600 : 400
-                    }}
-                  >
-                    {formatRupiah(row.kredit)}
-                  </TableCell>
-                  <TableCell 
-                    align="right"
-                    sx={{ 
-                      color: theme => theme.palette.mode === 'dark' ? '#FFFFFF' : '#1976D2',
-                      fontWeight: 600 
-                    }}
-                  >
-                    {formatRupiah(row.saldo)}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {dummyData.length === 0 && (
+          <StyledTableContainer>
+            <Table>
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
-                    <Typography variant="body1" color="textSecondary">
-                      Belum ada data transaksi
-                    </Typography>
-                  </TableCell>
+                  <TableCell>Tanggal</TableCell>
+                  <TableCell>Kategori</TableCell>
+                  <TableCell>Keterangan</TableCell>
+                  <TableCell align="right">Nominal</TableCell>
+                  <TableCell align="right">Jenis</TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </StyledTableContainer>
-      </div>
+              </TableHead>
+              <TableBody>
+                {data.map((row, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{row.tanggal}</TableCell>
+                    <TableCell>{row.kategori}</TableCell>
+                    <TableCell>{row.keterangan}</TableCell>
+                    <TableCell align="right">
+                      {formatRupiah(row.pemasukan)}
+                    </TableCell>
+                    <TableCell align="right">
+                      {row.kategori}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {data.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                      <Typography variant="body1" color="textSecondary">
+                        Belum ada data transaksi
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </StyledTableContainer>
+        </div>
+      )}
     </AnimatedContainer>
   )
 }

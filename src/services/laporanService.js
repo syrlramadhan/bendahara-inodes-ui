@@ -1,16 +1,44 @@
-import { API_BASE_URL } from '@/config/api';
+import { API_BASE_URL, getHeaders } from '@/config/api';
+import Cookies from 'js-cookie';
 
 export const laporanService = {
     getAllLaporan: async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/laporan/getall`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch laporan');
+            const token = Cookies.get('authToken');
+            if (!token) {
+                throw new Error('Token tidak ditemukan');
             }
-            const data = await response.json();
-            return data.data;
+
+            const response = await fetch(`${API_BASE_URL}/pemasukan/getall`, {
+                method: 'GET',
+                headers: {
+                    ...getHeaders(token),
+                    'ngrok-skip-browser-warning': 'true'
+                },
+                credentials: 'same-origin'
+            });
+            
+            if (!response.ok) {
+                throw new Error('Gagal mengambil data pemasukan');
+            }
+            
+            const result = await response.json();
+            console.log('API Response:', result); // Debugging
+            
+            if (result.status === "OK" && Array.isArray(result.data)) {
+                return result.data.map(item => ({
+                    tanggal: item.tanggal,
+                    keterangan: item.keterangan,
+                    kategori: item.kategori,
+                    pemasukan: item.nominal,
+                    pengeluaran: 0,
+                    total_saldo: item.nominal // Sementara menggunakan nominal sebagai saldo
+                }));
+            }
+            
+            return [];
         } catch (error) {
-            console.error('Error fetching laporan:', error);
+            console.error('Error fetching pemasukan:', error);
             throw error;
         }
     },

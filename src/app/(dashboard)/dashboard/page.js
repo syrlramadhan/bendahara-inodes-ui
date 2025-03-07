@@ -76,28 +76,38 @@ export default function Dashboard() {
   const [totalPemasukan, setTotalPemasukan] = useState(0)
   const [totalPengeluaran, setTotalPengeluaran] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true)
+        setError(null)
         const data = await laporanService.getAllLaporan()
-        setLaporan(data)
         
-        let saldo = 0
-        let pemasukan = 0
-        let pengeluaran = 0
-        
-        data.forEach(item => {
-          saldo = item.total_saldo
-          pemasukan += item.pemasukan
-          pengeluaran += item.pengeluaran
-        })
-        
-        setTotalSaldo(saldo)
-        setTotalPemasukan(pemasukan)
-        setTotalPengeluaran(pengeluaran)
+        if (Array.isArray(data)) {
+          setLaporan(data)
+          
+          let saldo = 0
+          let pemasukan = 0
+          let pengeluaran = 0
+          
+          data.forEach(item => {
+            if (item.total_saldo) saldo = item.total_saldo
+            if (item.pemasukan) pemasukan += item.pemasukan
+            if (item.pengeluaran) pengeluaran += item.pengeluaran
+          })
+          
+          setTotalSaldo(saldo)
+          setTotalPemasukan(pemasukan)
+          setTotalPengeluaran(pengeluaran)
+        } else {
+          console.error('Data is not an array:', data)
+          setError('Format data tidak valid')
+        }
       } catch (error) {
         console.error('Error fetching data:', error)
+        setError(error.message || 'Gagal mengambil data')
       } finally {
         setLoading(false)
       }
@@ -130,24 +140,24 @@ export default function Dashboard() {
         <StyledCard variant="purple">
           <ContentWrapper>
             <Box>
-              <Typography variant="h3" sx={{
+              <Typography variant="h3" component="div" sx={{
                 fontWeight: 700,
                 fontSize: { xs: '1.5rem', sm: '2.5rem' },
                 mb: 2
               }}>
                 Selamat Datang di Sistem Bendahara
               </Typography>
-              <Typography variant="h6" sx={{
+              <Typography variant="h6" component="div" sx={{
                 fontWeight: 400,
                 opacity: 0.8,
                 mb: 4
               }}>
                 Kelola keuangan desa dengan lebih mudah dan efisien
               </Typography>
-              <Typography sx={{ fontSize: '100%', opacity: 0.9 }}>
+              <Typography component="div" sx={{ fontSize: '100%', opacity: 0.9 }}>
                 Total Kas Desa
               </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 700, mt: 1 }}>
+              <Typography variant="h4" component="div" sx={{ fontWeight: 700, mt: 1 }}>
                 {formatCurrency(totalSaldo)}
               </Typography>
             </Box>
