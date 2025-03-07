@@ -3,9 +3,11 @@ import { API_ENDPOINTS } from '@/config/api';
 
 export async function POST(request) {
     try {
-        const formData = await request.formData();
+        // Terima data sebagai JSON
+        const data = await request.json();
         const token = request.headers.get('Authorization');
 
+        // Validasi token
         if (!token) {
             return NextResponse.json({
                 success: false,
@@ -13,16 +15,62 @@ export async function POST(request) {
             }, { status: 401 });
         }
 
+        // Validasi data
+        if (!data.tanggal || !data.nominal || !data.keterangan || !data.kategori) {
+            return NextResponse.json({
+                success: false,
+                message: 'Data tidak lengkap (tanggal, nominal, kategori, dan keterangan harus diisi)'
+            }, { status: 400 });
+        }
+
+        // Validasi format tanggal
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!dateRegex.test(data.tanggal)) {
+            return NextResponse.json({
+                success: false,
+                message: 'Format tanggal tidak valid (YYYY-MM-DD)'
+            }, { status: 400 });
+        }
+
+        // Validasi nominal
+        if (isNaN(data.nominal) || data.nominal <= 0) {
+            return NextResponse.json({
+                success: false,
+                message: 'Nominal harus berupa angka positif'
+            }, { status: 400 });
+        }
+
+        // Validasi kategori
+        if (!data.kategori.trim()) {
+            return NextResponse.json({
+                success: false,
+                message: 'Kategori tidak boleh kosong'
+            }, { status: 400 });
+        }
+
+        console.log('Sending data to backend:', data);
+
         // Forward request ke backend API
         const response = await fetch(API_ENDPOINTS.PEMASUKAN_ADD, {
             method: 'POST',
             headers: {
                 'Authorization': token,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
                 'ngrok-skip-browser-warning': 'true'
             },
-            body: formData
+            body: JSON.stringify({
+                tanggal: data.tanggal,
+                nominal: data.nominal,
+                kategori: data.kategori.trim(),
+                keterangan: data.keterangan.trim()
+            })
         });
 
+        // Log response untuk debugging
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+        
         // Coba parse response sebagai text terlebih dahulu
         const responseText = await response.text();
         console.log('Response from backend:', responseText);
@@ -36,7 +84,14 @@ export async function POST(request) {
                 success: false,
                 message: 'Format response tidak valid',
                 error: responseText
-            }, { status: 500 });
+            }, { 
+                status: 500,
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization, ngrok-skip-browser-warning'
+                }
+            });
         }
 
         // Jika response tidak ok, kembalikan error
@@ -44,7 +99,14 @@ export async function POST(request) {
             return NextResponse.json({
                 success: false,
                 message: responseData.message || 'Gagal menambah pemasukan'
-            }, { status: response.status });
+            }, { 
+                status: response.status,
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization, ngrok-skip-browser-warning'
+                }
+            });
         }
 
         // Jika berhasil, kembalikan response
@@ -52,6 +114,12 @@ export async function POST(request) {
             success: true,
             message: 'Berhasil menambah pemasukan',
             data: responseData.data || responseData
+        }, {
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization, ngrok-skip-browser-warning'
+            }
         });
 
     } catch (error) {
@@ -59,7 +127,14 @@ export async function POST(request) {
         return NextResponse.json({
             success: false,
             message: error.message || 'Terjadi kesalahan saat menambah pemasukan'
-        }, { status: 500 });
+        }, { 
+            status: 500,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization, ngrok-skip-browser-warning'
+            }
+        });
     }
 }
 

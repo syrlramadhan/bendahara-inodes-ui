@@ -81,55 +81,77 @@ export const laporanService = {
 
     addPemasukan: async (data) => {
         try {
+            // Validasi tanggal
+            if (!data.tanggal || isNaN(Date.parse(data.tanggal))) {
+                throw new Error('Format tanggal tidak valid');
+            }
+
+            // Validasi nominal
+            const nominal = typeof data.nominal === 'string' ? 
+                parseInt(data.nominal.replace(/\D/g, '')) : 
+                parseInt(data.nominal);
+
+            if (isNaN(nominal) || nominal <= 0) {
+                throw new Error('Nominal harus berupa angka positif');
+            }
+
+            // Validasi kategori
+            if (!data.kategori || data.kategori.trim() === '') {
+                throw new Error('Kategori tidak boleh kosong');
+            }
+
+            // Validasi keterangan
+            if (!data.keterangan || data.keterangan.trim() === '') {
+                throw new Error('Keterangan tidak boleh kosong');
+            }
+
+            // Siapkan data dalam format JSON
+            const jsonData = {
+                tanggal: data.tanggal,
+                nominal: nominal,
+                kategori: data.kategori.trim(),
+                keterangan: data.keterangan.trim()
+            };
+
+            console.log('Sending data:', jsonData);
+
             const token = Cookies.get('authToken');
             if (!token) {
                 throw new Error('Token tidak ditemukan');
             }
 
-            // Bersihkan dan validasi data
-            const nominal = data.nominal.toString().replace(/[^0-9]/g, '');
-            if (!nominal) {
-                throw new Error('Nominal harus berupa angka');
-            }
-
-            const formData = new FormData();
-            formData.append('tanggal', data.tanggal);
-            formData.append('nominal', nominal);
-            formData.append('keterangan', data.keterangan);
-
-            console.log('Sending data:', {
-                tanggal: data.tanggal,
-                nominal: nominal,
-                keterangan: data.keterangan
-            });
-
-            const response = await fetch(`/api/pemasukan/add`, {
+            const response = await fetch('/api/pemasukan/add', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'ngrok-skip-browser-warning': 'true'
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
-                body: formData
+                body: JSON.stringify(jsonData)
             });
+
+            // Log response untuk debugging
+            console.log('Response status:', response.status);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
             const responseText = await response.text();
             console.log('Response text:', responseText);
-            
-            let result;
+
+            let responseData;
             try {
-                result = JSON.parse(responseText);
+                responseData = JSON.parse(responseText);
             } catch (error) {
                 console.error('Error parsing response:', error);
                 throw new Error('Format response tidak valid');
             }
 
             if (!response.ok) {
-                throw new Error(result.message || 'Gagal menambah pemasukan');
+                throw new Error(responseData.message || 'Gagal menambah pemasukan');
             }
 
-            return result;
+            return responseData;
         } catch (error) {
-            console.error('Error adding pemasukan:', error);
+            console.error('Error in addPemasukan:', error);
             throw error;
         }
     },

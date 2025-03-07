@@ -70,7 +70,8 @@ export default function Pemasukan() {
   const [formData, setFormData] = useState({
     tanggal: '',
     nominal: '',
-    keterangan: ''
+    keterangan: '',
+    kategori: ''
   })
   const [showAlert, setShowAlert] = useState(false)
   const [alertMessage, setAlertMessage] = useState('')
@@ -108,7 +109,8 @@ export default function Pemasukan() {
     setFormData({
       tanggal: '',
       nominal: '',
-      keterangan: ''
+      keterangan: '',
+      kategori: ''
     })
     setShowModal(true)
   }
@@ -118,7 +120,8 @@ export default function Pemasukan() {
     setFormData({
       tanggal: row.tanggal,
       nominal: row.pemasukan,
-      keterangan: row.keterangan
+      keterangan: row.keterangan,
+      kategori: row.kategori || ''
     })
     setShowModal(true)
   }
@@ -144,39 +147,67 @@ export default function Pemasukan() {
   }
 
   const handleSave = async () => {
-    if (!formData.tanggal || !formData.nominal || !formData.keterangan) {
-      showAlertMessage('Semua field harus diisi', 'error')
-      return
-    }
-
     try {
-      setLoading(true)
+      // Validasi tanggal
+      if (!formData.tanggal) {
+        showAlertMessage('Tanggal harus diisi', 'error');
+        return;
+      }
+
+      // Validasi format tanggal
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(formData.tanggal)) {
+        showAlertMessage('Format tanggal tidak valid (YYYY-MM-DD)', 'error');
+        return;
+      }
+
+      // Validasi nominal
+      if (!formData.nominal || isNaN(formData.nominal) || parseFloat(formData.nominal) <= 0) {
+        showAlertMessage('Nominal harus berupa angka positif', 'error');
+        return;
+      }
+
+      // Validasi kategori
+      if (!formData.kategori || formData.kategori.trim() === '') {
+        showAlertMessage('Kategori tidak boleh kosong', 'error');
+        return;
+      }
+
+      // Validasi keterangan
+      if (!formData.keterangan || formData.keterangan.trim() === '') {
+        showAlertMessage('Keterangan tidak boleh kosong', 'error');
+        return;
+      }
+
+      setLoading(true);
+
       const data = {
         tanggal: formData.tanggal,
-        nominal: formData.nominal,
-        keterangan: formData.keterangan
-      }
+        nominal: parseFloat(formData.nominal),
+        kategori: formData.kategori.trim(),
+        keterangan: formData.keterangan.trim()
+      };
 
       if (editingId) {
         await laporanService.updateLaporan(editingId, {
           ...data,
           jenis: 'Pemasukan'
-        })
-        showAlertMessage('Data berhasil diperbarui', 'success')
+        });
+        showAlertMessage('Data berhasil diperbarui', 'success');
       } else {
-        await laporanService.addPemasukan(data)
-        showAlertMessage('Data berhasil ditambahkan', 'success')
+        await laporanService.addPemasukan(data);
+        showAlertMessage('Data berhasil ditambahkan', 'success');
       }
       
-      setShowModal(false)
-      fetchData()
+      setShowModal(false);
+      fetchData();
     } catch (error) {
-      console.error('Error saving data:', error)
-      showAlertMessage(error.message || 'Gagal menyimpan data', 'error')
+      console.error('Error saving data:', error);
+      showAlertMessage(error.message || 'Gagal menyimpan data', 'error');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', {
@@ -379,6 +410,15 @@ export default function Pemasukan() {
             }}
           />
           <TextField
+            label="Kategori"
+            name="kategori"
+            value={formData.kategori}
+            onChange={handleInputChange}
+            fullWidth
+            sx={{ mb: 2 }}
+            placeholder="Contoh: Pajak, Retribusi, dll"
+          />
+          <TextField
             label="Keterangan"
             name="keterangan"
             value={formData.keterangan}
@@ -386,6 +426,7 @@ export default function Pemasukan() {
             fullWidth
             multiline
             rows={3}
+            placeholder="Masukkan detail keterangan pemasukan"
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #eee' }}>
