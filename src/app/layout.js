@@ -1,21 +1,27 @@
+'use client';
+
 import { Inter } from 'next/font/google'
 import './globals.css'
+import { AuthProvider } from '@/context/AuthContext'
 import { SoftUIControllerProvider } from '@/context'
+import { ThemeProvider } from '@mui/material/styles'
+import CssBaseline from '@mui/material/CssBaseline'
+import theme from '../theme'
 
 const inter = Inter({ subsets: ['latin'] })
 
-export const metadata = {
-  title: 'UI Bendahara',
-  description: 'Aplikasi Manajemen Keuangan',
-}
-
 export default function RootLayout({ children }) {
   return (
-    <html lang="id">
+    <html lang="en">
       <body className={inter.className}>
-        <SoftUIControllerProvider>
-          {children}
-        </SoftUIControllerProvider>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <SoftUIControllerProvider>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </SoftUIControllerProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

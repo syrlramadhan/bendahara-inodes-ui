@@ -25,7 +25,19 @@ export function middleware(request) {
     }
   }
 
-  return NextResponse.next()
+  // Get the origin making the request
+  const origin = request.headers.get('origin') || '';
+  
+  // Get response from the target API
+  const response = NextResponse.next();
+
+  // Add CORS headers to the response
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning');
+  response.headers.set('Access-Control-Max-Age', '86400');
+
+  return response;
 }
 
 // Konfigurasi path yang akan diproteksi
@@ -36,6 +48,7 @@ export const config = {
     '/pengeluaran/:path*',
     '/kas-desa/:path*',
     '/laporan/:path*',
-    '/authentication/sign-in'
+    '/authentication/sign-in',
+    '/api/:path*'
   ]
 } 
