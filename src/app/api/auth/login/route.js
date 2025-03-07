@@ -71,7 +71,7 @@ export async function POST(request) {
             success: true,
             message: 'Login berhasil',
             data: {
-                token: responseData.token || responseData.data?.token,
+                token: responseData.data || responseData.data?.data,
                 user: responseData.data || {}
             }
         }, {
