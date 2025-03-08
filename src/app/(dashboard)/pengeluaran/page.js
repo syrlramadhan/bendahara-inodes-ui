@@ -149,6 +149,15 @@ export default function Pengeluaran() {
         const url = URL.createObjectURL(file)
         setPreviewUrl(url)
       }
+    } else if (name === 'nominal') {
+      console.log('Input nominal value:', value)
+      // Hapus semua karakter non-digit
+      const numericValue = value.replace(/\D/g, '')
+      console.log('Numeric value:', numericValue)
+      setFormData(prev => ({
+        ...prev,
+        [name]: numericValue
+      }))
     } else {
       setFormData(prev => ({
         ...prev,
@@ -578,6 +587,10 @@ export default function Pengeluaran() {
             onChange={handleInputChange}
             fullWidth
             required
+            inputProps={{
+              maxLength: 11,
+              pattern: '[0-9]*'
+            }}
             InputProps={{
               startAdornment: (
                 <Typography sx={{ 
