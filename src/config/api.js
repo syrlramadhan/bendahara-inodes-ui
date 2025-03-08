@@ -1,5 +1,6 @@
-export const API_BASE_URL = 'https://6d29-140-213-217-131.ngrok-free.app/api';
-export const UPLOAD_URL = 'https://6d29-140-213-217-131.ngrok-free.app/api/uploads/';
+export const NGROK_URL = 'https://6d29-140-213-217-131.ngrok-free.app';
+export const API_BASE_URL = `${NGROK_URL}/api`;
+export const UPLOAD_URL = `${API_BASE_URL}/uploads/`;
 
 export const API_ENDPOINTS = {
     // Admin endpoints
@@ -31,6 +32,19 @@ export const API_ENDPOINTS = {
     LAPORAN_GET_SALDO: `${API_BASE_URL}/laporan/saldo`,
     LAPORAN_GET_PENGELUARAN: `${API_BASE_URL}/laporan/pengeluaran`,
     LAPORAN_GET_PEMASUKAN: `${API_BASE_URL}/laporan/pemasukan`,
+
+    // Iuran endpoints
+    IURAN_ADD: `${API_BASE_URL}/iuran/add`,
+    IURAN_UPDATE: `${API_BASE_URL}/iuran/update`,
+    IURAN_GET_ALL: `${API_BASE_URL}/iuran/all`,
+    IURAN_DELETE: `${API_BASE_URL}/iuran/delete`,
+
+    // Sumbangan endpoints
+    SUMBANGAN_ADD: `${API_BASE_URL}/sumbangan/add`,
+    SUMBANGAN_UPDATE: `${API_BASE_URL}/sumbangan/update`,
+    SUMBANGAN_GET_ALL: `${API_BASE_URL}/sumbangan/all`,
+    SUMBANGAN_DELETE: `${API_BASE_URL}/sumbangan/delete`,
+    SUMBANGAN_IMAGE: (filename) => `${API_BASE_URL}/image/sumbangan/${filename}`,
 };
 
 export const getHeaders = (token = null) => {

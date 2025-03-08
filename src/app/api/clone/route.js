@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server'
+import { API_ENDPOINTS, getHeaders } from '@/config/api'
 
 const cloneIuran = async (token, data) => {
-  const response = await fetch('https://6d29-140-213-217-131.ngrok-free.app/api/iuran/add', {
+  const response = await fetch(API_ENDPOINTS.IURAN_ADD, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: getHeaders(token),
     body: JSON.stringify(data)
   })
   return response.json()
@@ -21,7 +19,7 @@ const cloneSumbangan = async (token, data) => {
   formData.append('nilai', data.nilai)
   formData.append('keterangan', data.keterangan)
 
-  const response = await fetch('https://6d29-140-213-217-131.ngrok-free.app/api/sumbangan/add', {
+  const response = await fetch(API_ENDPOINTS.SUMBANGAN_ADD, {
     method: 'POST',
     body: formData
   })
@@ -35,7 +33,7 @@ const clonePengeluaran = async (token, data) => {
   formData.append('nilai', data.nilai)
   formData.append('keterangan', data.keterangan)
 
-  const response = await fetch('https://6d29-140-213-217-131.ngrok-free.app/api/pengeluaran/add', {
+  const response = await fetch(API_ENDPOINTS.PENGELUARAN_ADD, {
     method: 'POST',
     body: formData
   })

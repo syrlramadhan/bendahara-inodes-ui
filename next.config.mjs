@@ -1,10 +1,12 @@
 /** @type {import('next').NextConfig} */
+const NGROK_URL = 'https://6d29-140-213-217-131.ngrok-free.app';
+
 const nextConfig = {
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '6d29-140-213-217-131.ngrok-free.app',
+        hostname: NGROK_URL.replace('https://', ''),
         port: '',
         pathname: '/**',
       },
@@ -14,7 +16,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'https://6d29-140-213-217-131.ngrok-free.app/api/:path*'
+        destination: `${NGROK_URL}/api/:path*`
       }
     ]
   },

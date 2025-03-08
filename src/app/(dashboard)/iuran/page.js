@@ -15,10 +15,15 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  Typography
+  Typography,
+  Box,
+  IconButton,
+  Tooltip
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
+import DeleteIcon from '@mui/icons-material/Delete'
 import { useRouter } from 'next/navigation'
+import { API_ENDPOINTS, getHeaders } from '@/config/api'
 
 export default function Iuran() {
   const router = useRouter()
@@ -43,12 +48,9 @@ export default function Iuran() {
           return
         }
 
-        const response = await fetch('https://6d29-140-213-217-131.ngrok-free.app/api/iuran/all', {
+        const response = await fetch(API_ENDPOINTS.IURAN_GET_ALL, {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
+          headers: getHeaders(token),
         })
         const result = await response.json()
 
@@ -107,12 +109,9 @@ export default function Iuran() {
         return
       }
 
-      const response = await fetch('https://6d29-140-213-217-131.ngrok-free.app/api/iuran/update', {
+      const response = await fetch(API_ENDPOINTS.IURAN_UPDATE, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: getHeaders(token),
         body: JSON.stringify(updatedFormData),
       })
 
@@ -125,10 +124,8 @@ export default function Iuran() {
       setShowModal(false)
       
       // Refresh data
-      const refreshResponse = await fetch('https://6d29-140-213-217-131.ngrok-free.app/api/iuran/all', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      const refreshResponse = await fetch(API_ENDPOINTS.IURAN_GET_ALL, {
+        headers: getHeaders(token),
       })
       const refreshData = await refreshResponse.json()
       const formattedData = {}
@@ -149,6 +146,55 @@ export default function Iuran() {
       setRows(formattedData)
     } catch (error) {
       console.error('Error updating data:', error)
+    }
+  }
+
+  const handleDeleteRow = async (bulan, index) => {
+    if (!window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+      return
+    }
+
+    try {
+      const token = document.cookie.replace(/(?:(?:^|.*;\s*)authToken\s*=\s*([^;]*).*$)|^.*$/, "$1")
+      if (!token) {
+        router.push('/authentication/sign-in')
+        return
+      }
+
+      const dataToDelete = rows[bulan][index]
+      const response = await fetch(`${API_ENDPOINTS.IURAN_DELETE}/${dataToDelete.no}`, {
+        method: 'DELETE',
+        headers: getHeaders(token),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete data')
+      }
+
+      // Refresh data after deletion
+      const refreshResponse = await fetch(API_ENDPOINTS.IURAN_GET_ALL, {
+        headers: getHeaders(token),
+      })
+      const refreshData = await refreshResponse.json()
+      const formattedData = {}
+      refreshData.forEach((item) => {
+        const bulan = item.bulan.toLowerCase()
+        if (!formattedData[bulan]) {
+          formattedData[bulan] = []
+        }
+        formattedData[bulan].push({
+          bulan: bulan,
+          no: item.no,
+          nama: item.nama,
+          minggu1: item.minggu1.Int16,
+          minggu2: item.minggu2.Int16,
+          minggu3: item.minggu3.Int16,
+        })
+      })
+      setRows(formattedData)
+    } catch (error) {
+      console.error('Error deleting data:', error)
+      alert('Gagal menghapus data')
     }
   }
 
@@ -194,15 +240,26 @@ export default function Iuran() {
                   <TableCell>Rp.{row.minggu2}</TableCell>
                   <TableCell>Rp.{row.minggu3}</TableCell>
                   <TableCell>
-                    <Button
-                      variant="contained"
-                      color="warning"
-                      size="small"
-                      onClick={() => handleEditRow(bulan, idx)}
-                      startIcon={<EditIcon />}
-                    >
-                      Edit
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Tooltip title="Edit">
+                        <IconButton
+                          color="warning"
+                          size="small"
+                          onClick={() => handleEditRow(bulan, idx)}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Hapus">
+                        <IconButton
+                          color="error"
+                          size="small"
+                          onClick={() => handleDeleteRow(bulan, idx)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}

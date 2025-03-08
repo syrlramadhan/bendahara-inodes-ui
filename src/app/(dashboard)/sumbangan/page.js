@@ -16,11 +16,15 @@ import {
   DialogActions,
   TextField,
   Typography,
-  Box
+  Box,
+  IconButton,
+  Tooltip
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
+import DeleteIcon from '@mui/icons-material/Delete'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import { API_ENDPOINTS, getHeaders } from '@/config/api'
 
 export default function Sumbangan() {
   const router = useRouter()
@@ -46,12 +50,9 @@ export default function Sumbangan() {
           return
         }
 
-        const response = await fetch('https://6d29-140-213-217-131.ngrok-free.app/api/sumbangan/all', {
+        const response = await fetch(API_ENDPOINTS.SUMBANGAN_GET_ALL, {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
+          headers: getHeaders(token),
         })
         const result = await response.json()
         setRows(result)
@@ -108,8 +109,8 @@ export default function Sumbangan() {
 
     const newFormData = new FormData()
     let url = formData.No 
-      ? "https://6d29-140-213-217-131.ngrok-free.app/api/sumbangan/update"
-      : "https://6d29-140-213-217-131.ngrok-free.app/api/sumbangan/add"
+      ? API_ENDPOINTS.SUMBANGAN_UPDATE
+      : API_ENDPOINTS.SUMBANGAN_ADD
 
     if (!formData.No && !formData.notaImage) {
       alert("Harap mengisi image")
@@ -146,10 +147,8 @@ export default function Sumbangan() {
       
       // Refresh data
       const token = document.cookie.replace(/(?:(?:^|.*;\s*)authToken\s*=\s*([^;]*).*$)|^.*$/, "$1")
-      const refreshResponse = await fetch('https://6d29-140-213-217-131.ngrok-free.app/api/sumbangan/all', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      const refreshResponse = await fetch(API_ENDPOINTS.SUMBANGAN_GET_ALL, {
+        headers: getHeaders(token),
       })
       const refreshData = await refreshResponse.json()
       setRows(refreshData)
@@ -169,6 +168,40 @@ export default function Sumbangan() {
       keterangan: '',
     })
     setShowModal(false)
+  }
+
+  const handleDeleteRow = async (index) => {
+    if (!window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+      return
+    }
+
+    try {
+      const token = document.cookie.replace(/(?:(?:^|.*;\s*)authToken\s*=\s*([^;]*).*$)|^.*$/, "$1")
+      if (!token) {
+        router.push('/authentication/sign-in')
+        return
+      }
+
+      const dataToDelete = rows[index]
+      const response = await fetch(`${API_ENDPOINTS.SUMBANGAN_DELETE}/${dataToDelete.No}`, {
+        method: 'DELETE',
+        headers: getHeaders(token),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete data')
+      }
+
+      // Refresh data after deletion
+      const refreshResponse = await fetch(API_ENDPOINTS.SUMBANGAN_GET_ALL, {
+        headers: getHeaders(token),
+      })
+      const refreshData = await refreshResponse.json()
+      setRows(refreshData)
+    } catch (error) {
+      console.error('Error deleting data:', error)
+      alert('Gagal menghapus data')
+    }
   }
 
   return (
@@ -206,7 +239,7 @@ export default function Sumbangan() {
                   {row.nota ? (
                     <Box sx={{ width: 50, height: 50, position: 'relative' }}>
                       <Image
-                        src={`https://6d29-140-213-217-131.ngrok-free.app/api/image/sumbangan/${row.nota}`}
+                        src={API_ENDPOINTS.SUMBANGAN_IMAGE(row.nota)}
                         alt="Nota"
                         fill
                         style={{ objectFit: 'cover' }}
@@ -217,15 +250,26 @@ export default function Sumbangan() {
                 <TableCell>Rp {row.nilai}</TableCell>
                 <TableCell>{row.keterangan}</TableCell>
                 <TableCell>
-                  <Button
-                    variant="contained"
-                    color="warning"
-                    size="small"
-                    onClick={() => handleEditRow(index)}
-                    startIcon={<EditIcon />}
-                  >
-                    Edit
-                  </Button>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Tooltip title="Edit">
+                      <IconButton
+                        color="warning"
+                        size="small"
+                        onClick={() => handleEditRow(index)}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Hapus">
+                      <IconButton
+                        color="error"
+                        size="small"
+                        onClick={() => handleDeleteRow(index)}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                 </TableCell>
               </TableRow>
             ))}
