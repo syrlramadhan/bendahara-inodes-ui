@@ -36,31 +36,40 @@ export const laporanService = {
             const pemasukanData = await pemasukanResponse.json();
             const pengeluaranData = await pengeluaranResponse.json();
 
-            console.log('Pemasukan:', pemasukanData);
-            console.log('Pengeluaran:', pengeluaranData);
+            console.log('Raw Pemasukan:', pemasukanData);
+            console.log('Raw Pengeluaran:', pengeluaranData);
 
             // Gabungkan dan urutkan data berdasarkan tanggal
             const combinedData = [
-                ...(pemasukanData.data || []).map(item => ({
-                    id: item.id,
-                    tanggal: item.tanggal,
-                    keterangan: item.keterangan,
-                    kategori: item.kategori,
-                    pemasukan: parseInt(item.nominal) || 0,
-                    pengeluaran: 0,
-                    jenis: 'Pemasukan'
-                })),
-                ...(pengeluaranData.data || []).map(item => ({
-                    id: item.id,
-                    tanggal: item.tanggal,
-                    keterangan: item.keterangan,
-                    kategori: item.kategori,
-                    pemasukan: 0,
-                    pengeluaran: parseInt(item.nominal) || 0,
-                    jenis: 'Pengeluaran',
-                    nota: item.nota
-                }))
+                ...(pemasukanData.data || []).map(item => {
+                    console.log('Mapping pemasukan item:', item);
+                    return {
+                        id: item.id_pemasukan,
+                        tanggal: item.tanggal,
+                        kategori: 'Pemasukan',
+                        keterangan: item.keterangan,
+                        pemasukan: parseInt(item.nominal),
+                        pengeluaran: 0,
+                        jenis: 'pemasukan',
+                        total_saldo: 0 // akan dihitung nanti
+                    };
+                }),
+                ...(pengeluaranData.data || []).map(item => {
+                    console.log('Mapping pengeluaran item:', item);
+                    return {
+                        id: item.id_pengeluaran,
+                        tanggal: item.tanggal,
+                        kategori: 'Pengeluaran',
+                        keterangan: item.keterangan,
+                        pemasukan: 0,
+                        pengeluaran: parseInt(item.nominal),
+                        jenis: 'pengeluaran',
+                        total_saldo: 0 // akan dihitung nanti
+                    };
+                })
             ].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+
+            console.log('Combined data before saldo:', combinedData);
 
             // Hitung saldo berjalan
             let saldo = 0;
@@ -72,6 +81,7 @@ export const laporanService = {
                 };
             });
 
+            console.log('Final data with saldo:', dataWithSaldo);
             return dataWithSaldo;
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -236,53 +246,167 @@ export const laporanService = {
                 throw new Error('Token tidak ditemukan');
             }
 
-            const formData = new FormData();
-            formData.append('tanggal', data.tanggal);
-            formData.append('nominal', data.nominal);
-            formData.append('keterangan', data.keterangan);
+            console.log('Update data:', { id, data });
 
+            // Tentukan endpoint berdasarkan jenis transaksi
             let endpoint = '';
-            if (data.jenis === 'Pemasukan') {
+            if (data.jenis === 'pemasukan') {
                 endpoint = `/api/pemasukan/update/${id}`;
-            } else {
+                
+                // Untuk pemasukan, kirim data sebagai JSON
+                const jsonData = {
+                    tanggal: data.tanggal,
+                    nominal: data.nominal,
+                    kategori: data.kategori,
+                    keterangan: data.keterangan
+                };
+
+                console.log('Sending pemasukan update request:', { endpoint, data: jsonData });
+
+                const response = await fetch(endpoint, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify(jsonData),
+                    credentials: 'include'
+                });
+
+                console.log('Update response:', {
+                    status: response.status,
+                    statusText: response.statusText
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Gagal mengupdate data');
+                }
+
+                return await response.json();
+
+            } else if (data.jenis === 'pengeluaran') {
                 endpoint = `/api/pengeluaran/update/${id}`;
+                
+                // Untuk pengeluaran, gunakan FormData
+                const formData = new FormData();
+                formData.append('tanggal', data.tanggal);
+                formData.append('nominal', data.nominal);
+                formData.append('keterangan', data.keterangan);
+
+                if (data.nota) {
+                    formData.append('nota', data.nota);
+                }
+
+                console.log('Sending pengeluaran update request:', { endpoint });
+
+                const response = await fetch(endpoint, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: formData,
+                    credentials: 'include'
+                });
+
+                console.log('Update response:', {
+                    status: response.status,
+                    statusText: response.statusText
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Gagal mengupdate data');
+                }
+
+                return await response.json();
+            } else {
+                throw new Error('Jenis transaksi tidak valid');
             }
-
-            const response = await fetch(endpoint, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'ngrok-skip-browser-warning': 'true'
-                },
-                body: formData,
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Gagal mengupdate data');
-            }
-
-            const result = await response.json();
-            return result;
         } catch (error) {
             console.error('Error updating data:', error);
             throw error;
         }
     },
 
-    deleteLaporan: async (id) => {
+    deleteLaporan: async (id, jenis) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/laporan/delete/${id}`, {
-                method: 'DELETE',
-            });
-            if (!response.ok) {
-                throw new Error('Failed to delete laporan');
+            const token = Cookies.get('authToken');
+            if (!token) {
+                throw new Error('Token tidak ditemukan');
             }
-            const data = await response.json();
+
+            // Validasi parameter
+            if (!id) {
+                console.error('ID tidak ditemukan:', { id, jenis });
+                throw new Error('ID tidak valid');
+            }
+
+            if (!jenis) {
+                console.error('Jenis transaksi tidak ditemukan:', { id, jenis });
+                throw new Error(`Jenis transaksi tidak ditemukan untuk ID: ${id}`);
+            }
+
+            // Normalize jenis to lowercase and remove spaces
+            const jenisLower = jenis.toLowerCase().trim();
+            console.log('Data untuk delete:', { id, jenis, jenisLower });
+
+            let endpoint = '';
+            // Cek jenis transaksi
+            if (jenisLower === 'pemasukan') {
+                endpoint = `/api/pemasukan/delete/${id}`;
+            } else if (jenisLower === 'pengeluaran') {
+                endpoint = `/api/pengeluaran/delete/${id}`;
+            } else {
+                console.error('Jenis transaksi tidak valid:', { original: jenis, normalized: jenisLower });
+                throw new Error(`Jenis transaksi tidak valid: ${jenis} (harus 'pemasukan' atau 'pengeluaran')`);
+            }
+
+            console.log('Mengirim request delete:', { endpoint, id, jenis: jenisLower });
+
+            const response = await fetch(endpoint, {
+                method: 'DELETE',
+                headers: {
+                    ...getHeaders(token),
+                    'ngrok-skip-browser-warning': 'true'
+                },
+                credentials: 'include'
+            });
+
+            console.log('Delete response:', {
+                status: response.status,
+                statusText: response.statusText,
+                headers: Object.fromEntries(response.headers.entries())
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
+                let errorData;
+                try {
+                    errorData = JSON.parse(errorText);
+                } catch (e) {
+                    errorData = { message: errorText };
+                }
+                throw new Error(errorData.message || 'Gagal menghapus data');
+            }
+
+            const responseText = await response.text();
+            console.log('Success response:', responseText);
+            
+            let data;
+            try {
+                data = responseText ? JSON.parse(responseText) : {};
+            } catch (e) {
+                console.warn('Could not parse response as JSON:', responseText);
+                data = {};
+            }
+            
             return data;
         } catch (error) {
-            console.error('Error deleting laporan:', error);
+            console.error('Error in deleteLaporan:', error);
             throw error;
         }
     }

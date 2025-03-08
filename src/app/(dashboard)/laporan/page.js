@@ -21,7 +21,11 @@ import {
   Grow,
   styled,
   keyframes,
-  CircularProgress
+  CircularProgress,
+  IconButton,
+  CardContent,
+  TextField,
+  InputAdornment
 } from '@mui/material'
 import { 
   FileDownload as FileDownloadIcon,
@@ -30,7 +34,9 @@ import {
   TableView as ExcelIcon,
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
-  AccountBalance as AccountBalanceIcon
+  AccountBalance as AccountBalanceIcon,
+  Delete as DeleteIcon,
+  Search as SearchIcon
 } from '@mui/icons-material'
 import { colors } from '@/styles/colors'
 import jsPDF from 'jspdf'
@@ -147,43 +153,37 @@ const IconWrapper = styled(Box)({
 });
 
 const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
+  backgroundColor: '#ffffff',
   borderRadius: '16px',
-  boxShadow: theme.palette.mode === 'dark' 
-    ? '0 4px 12px rgba(0,0,0,0.3)'
-    : '0 8px 16px rgba(0,0,0,0.1)',
+  boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)',
   overflow: 'hidden',
-  backgroundColor: theme.palette.mode === 'dark' ? '#1E1E1E' : '#ffffff',
-  animation: `${slideUp} 0.8s ease-out 0.6s both`,
-  '& .MuiTableHead-root': {
-    backgroundColor: theme.palette.mode === 'dark' ? '#2D2D2D' : '#f8f9fa',
-    '& .MuiTableCell-head': {
-      color: theme.palette.mode === 'dark' ? '#FFFFFF' : '#1976D2',
-      fontWeight: 600,
-      whiteSpace: 'nowrap',
-      borderBottom: `2px solid ${theme.palette.mode === 'dark' ? '#90CAF9' : '#1976D2'}`,
+  '& .MuiTable-root': {
+    '& .MuiTableHead-root': {
+      '& .MuiTableRow-root': {
+        backgroundColor: '#f8f9fa',
+        '& .MuiTableCell-root': {
+          color: '#1976D2',
+          fontWeight: 600,
+          whiteSpace: 'nowrap',
+          borderBottom: '2px solid #1976D2',
+          padding: '16px'
+        }
+      }
     },
-  },
-  '& .MuiTableBody-root': {
-    '& .MuiTableRow-root': {
-      opacity: 0,
-      animation: `${fadeIn} 0.5s ease-out forwards`,
-      '&:nth-of-type(1)': { animationDelay: '0.8s' },
-      '&:nth-of-type(2)': { animationDelay: '0.9s' },
-      '&:nth-of-type(3)': { animationDelay: '1.0s' },
-      '&:nth-of-type(4)': { animationDelay: '1.1s' },
-      '&:nth-of-type(5)': { animationDelay: '1.2s' },
-      transition: 'background-color 0.3s ease, transform 0.3s ease',
-      '&:hover': {
-        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(25, 118, 210, 0.04)',
-        transform: 'scale(1.01)',
-      },
-      '& .MuiTableCell-root': {
-        borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(224, 224, 224, 0.8)'}`,
-        color: theme.palette.mode === 'dark' ? '#FFFFFF' : 'inherit',
-        transition: 'color 0.3s ease',
-      },
-    },
-  },
+    '& .MuiTableBody-root': {
+      '& .MuiTableRow-root': {
+        '&:hover': {
+          backgroundColor: 'rgba(25, 118, 210, 0.04)',
+          transform: 'scale(1.01)',
+          transition: 'all 0.2s'
+        },
+        '& .MuiTableCell-root': {
+          padding: '16px',
+          borderBottom: '1px solid rgba(224, 224, 224, 0.8)'
+        }
+      }
+    }
+  }
 }));
 
 const StyledButton = styled(Button)(({ theme }) => ({
@@ -197,15 +197,28 @@ const StyledButton = styled(Button)(({ theme }) => ({
 
 export default function LaporanKeuangan() {
   const [data, setData] = useState([])
+  const [filteredData, setFilteredData] = useState([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [anchorEl, setAnchorEl] = useState(null)
   const open = Boolean(anchorEl)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [alert, setAlert] = useState({ open: false, message: '', severity: 'success' })
 
   useEffect(() => {
     fetchData()
   }, [refreshKey])
+
+  useEffect(() => {
+    // Filter data berdasarkan pencarian
+    const filtered = data.filter(item => 
+      item.keterangan?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.kategori?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.tanggal?.includes(searchQuery)
+    )
+    setFilteredData(filtered)
+  }, [searchQuery, data])
 
   const fetchData = async () => {
     try {
@@ -299,20 +312,6 @@ export default function LaporanKeuangan() {
     }
   }
 
-  // Fungsi untuk print
-  const handlePrint = () => {
-    const printContent = document.getElementById('print-content')
-    const originalContents = document.body.innerHTML
-    
-    document.body.innerHTML = printContent.innerHTML
-    
-    window.print()
-    
-    document.body.innerHTML = originalContents
-    handleClose()
-    window.location.reload() // Reload halaman setelah print
-  }
-
   // Fungsi untuk export Excel
   const exportToExcel = () => {
     const ws = XLSX.utils.json_to_sheet(data.map(row => ({
@@ -349,6 +348,49 @@ export default function LaporanKeuangan() {
   const totalPengeluaran = data.reduce((sum, item) => sum + (item.pengeluaran || 0), 0)
   const saldoAkhir = data.length > 0 ? data[0].total_saldo : 0
 
+  const handleDelete = async (id, jenis) => {
+    console.log('Attempting to delete:', { id, jenis });
+    
+    if (!id || !jenis) {
+      console.log('Invalid data:', { id, jenis });
+      setAlert({
+        open: true,
+        message: 'Data tidak valid untuk dihapus (No/ID tidak ditemukan)',
+        severity: 'error'
+      });
+      return;
+    }
+
+    // Konfirmasi penghapusan
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus ${jenis} dengan No ${id}?`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await laporanService.deleteLaporan(id, jenis);
+      
+      // Refresh data setelah menghapus
+      const updatedData = await laporanService.getAllLaporan();
+      setData(updatedData);
+      
+      setAlert({
+        open: true,
+        message: `${jenis} dengan No ${id} berhasil dihapus`,
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Error deleting data:', error);
+      setAlert({
+        open: true,
+        message: `Gagal menghapus ${jenis}: ${error.message}`,
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AnimatedContainer maxWidth="lg" sx={{ 
       mt: 4, 
@@ -366,23 +408,57 @@ export default function LaporanKeuangan() {
           <Typography color="error">{error}</Typography>
         </Box>
       ) : (
-        <div id="print-content">
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <div>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} sx={{
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 2, sm: 0 }
+          }}>
             <AnimatedTypography 
               variant="h4" 
               sx={{
                 fontWeight: 600,
                 color: theme => theme.palette.mode === 'dark' ? '#42A5F5' : '#1976D2',
                 textShadow: theme => theme.palette.mode === 'dark' ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+                fontSize: { xs: '1.5rem', sm: '2rem' }
               }}
             >
               Laporan Keuangan
             </AnimatedTypography>
-            <Box>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2,
+              width: { xs: '100%', sm: 'auto' },
+              flexDirection: { xs: 'column', sm: 'row' }
+            }}>
+              <TextField
+                placeholder="Cari transaksi..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                variant="outlined"
+                size="small"
+                sx={{ 
+                  minWidth: { xs: '100%', sm: '250px' },
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '12px',
+                    bgcolor: 'background.paper'
+                  }
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon color="action" />
+                    </InputAdornment>
+                  )
+                }}
+              />
               <Button
                 variant="outlined"
                 onClick={refreshData}
-                sx={{ mr: 2 }}
+                fullWidth={false}
+                sx={{ 
+                  borderRadius: '12px',
+                  minWidth: { xs: '100%', sm: '120px' }
+                }}
               >
                 Refresh Data
               </Button>
@@ -390,123 +466,390 @@ export default function LaporanKeuangan() {
                 variant="contained"
                 startIcon={<FileDownloadIcon />}
                 onClick={handleClick}
-                sx={{ '@media print': { display: 'none' } }}
+                fullWidth={false}
+                sx={{ 
+                  minWidth: { xs: '100%', sm: '160px' }
+                }}
               >
                 Unduh Laporan
               </StyledButton>
             </Box>
-            <Menu
-              anchorEl={anchorEl}
-              open={open}
-              onClose={handleClose}
-              sx={{ 
-                '@media print': { display: 'none' },
-                '& .MuiPaper-root': {
-                  borderRadius: '12px',
-                  boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
-                },
-              }}
-            >
-              <MenuItem onClick={generatePDF}>
-                <PdfIcon sx={{ mr: 1, color: '#f44336' }} /> Unduh PDF
-              </MenuItem>
-              <MenuItem onClick={exportToExcel}>
-                <ExcelIcon sx={{ mr: 1, color: '#4CAF50' }} /> Unduh Excel
-              </MenuItem>
-              <MenuItem onClick={handlePrint}>
-                <PrintIcon sx={{ mr: 1, color: '#2196F3' }} /> Cetak
-              </MenuItem>
-            </Menu>
           </Box>
 
           <Grid container spacing={3} mb={4}>
             <Grid item xs={12} sm={4}>
-              <StyledCard variant="income" delay={0.2}>
+              <StyledCard variant="income" delay={0.2} sx={{
+                p: { xs: 2, sm: 3 },
+                minHeight: { xs: '120px', sm: '140px' }
+              }}>
                 <IconWrapper>
-                  <TrendingUpIcon sx={{ fontSize: 48 }} />
+                  <TrendingUpIcon sx={{ fontSize: { xs: 36, sm: 48 } }} />
                 </IconWrapper>
-                <Typography variant="subtitle1" sx={{ mb: 1, opacity: 0.8, position: 'relative', zIndex: 1 }}>
+                <Typography variant="subtitle1" sx={{ 
+                  mb: 1, 
+                  opacity: 0.8, 
+                  position: 'relative', 
+                  zIndex: 1,
+                  fontSize: { xs: '0.875rem', sm: '1rem' }
+                }}>
                   Total Pemasukan
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 600, position: 'relative', zIndex: 1 }}>
+                <Typography variant="h4" sx={{ 
+                  fontWeight: 600, 
+                  position: 'relative', 
+                  zIndex: 1,
+                  fontSize: { xs: '1.5rem', sm: '2rem' }
+                }}>
                   {formatRupiah(totalPemasukan)}
                 </Typography>
               </StyledCard>
             </Grid>
             <Grid item xs={12} sm={4}>
-              <StyledCard variant="expense" delay={0.4}>
+              <StyledCard variant="expense" delay={0.4} sx={{
+                p: { xs: 2, sm: 3 },
+                minHeight: { xs: '120px', sm: '140px' }
+              }}>
                 <IconWrapper>
-                  <TrendingDownIcon sx={{ fontSize: 48 }} />
+                  <TrendingDownIcon sx={{ fontSize: { xs: 36, sm: 48 } }} />
                 </IconWrapper>
-                <Typography variant="subtitle1" sx={{ mb: 1, opacity: 0.8, position: 'relative', zIndex: 1 }}>
+                <Typography variant="subtitle1" sx={{ 
+                  mb: 1, 
+                  opacity: 0.8, 
+                  position: 'relative', 
+                  zIndex: 1,
+                  fontSize: { xs: '0.875rem', sm: '1rem' }
+                }}>
                   Total Pengeluaran
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 600, position: 'relative', zIndex: 1 }}>
+                <Typography variant="h4" sx={{ 
+                  fontWeight: 600, 
+                  position: 'relative', 
+                  zIndex: 1,
+                  fontSize: { xs: '1.5rem', sm: '2rem' }
+                }}>
                   {formatRupiah(totalPengeluaran)}
                 </Typography>
               </StyledCard>
             </Grid>
             <Grid item xs={12} sm={4}>
-              <StyledCard delay={0.6}>
+              <StyledCard delay={0.6} sx={{
+                p: { xs: 2, sm: 3 },
+                minHeight: { xs: '120px', sm: '140px' }
+              }}>
                 <IconWrapper>
-                  <AccountBalanceIcon sx={{ fontSize: 48 }} />
+                  <AccountBalanceIcon sx={{ fontSize: { xs: 36, sm: 48 } }} />
                 </IconWrapper>
-                <Typography variant="subtitle1" sx={{ mb: 1, opacity: 0.8, position: 'relative', zIndex: 1 }}>
+                <Typography variant="subtitle1" sx={{ 
+                  mb: 1, 
+                  opacity: 0.8, 
+                  position: 'relative', 
+                  zIndex: 1,
+                  fontSize: { xs: '0.875rem', sm: '1rem' }
+                }}>
                   Saldo Akhir
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 600, position: 'relative', zIndex: 1 }}>
+                <Typography variant="h4" sx={{ 
+                  fontWeight: 600, 
+                  position: 'relative', 
+                  zIndex: 1,
+                  fontSize: { xs: '1.5rem', sm: '2rem' }
+                }}>
                   {formatRupiah(saldoAkhir)}
                 </Typography>
               </StyledCard>
             </Grid>
           </Grid>
 
-          <StyledTableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Tanggal</TableCell>
-                  <TableCell>Kategori</TableCell>
-                  <TableCell>Keterangan</TableCell>
-                  <TableCell align="right">Nominal</TableCell>
-                  <TableCell align="right">Saldo</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.map((row, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{row.tanggal}</TableCell>
-                    <TableCell>{row.kategori}</TableCell>
-                    <TableCell>{row.keterangan}</TableCell>
-                    <TableCell 
-                      align="right"
+          <Menu
+            anchorEl={anchorEl}
+            open={open}
+            onClose={handleClose}
+            sx={{ 
+              '& .MuiPaper-root': {
+                borderRadius: '12px',
+                boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
+                minWidth: { xs: '200px', sm: '250px' }
+              },
+            }}
+          >
+            <MenuItem onClick={generatePDF} sx={{ py: { xs: 1.5, sm: 1 } }}>
+              <PdfIcon sx={{ mr: 1, color: '#f44336' }} /> Unduh PDF
+            </MenuItem>
+            <MenuItem onClick={exportToExcel} sx={{ py: { xs: 1.5, sm: 1 } }}>
+              <ExcelIcon sx={{ mr: 1, color: '#4CAF50' }} /> Unduh Excel
+            </MenuItem>
+          </Menu>
+
+          {/* Desktop Table View */}
+          <StyledCard sx={{ 
+            p: 0,
+            background: 'white',
+            color: 'inherit',
+            display: { xs: 'none', md: 'block' }
+          }}>
+            <Box sx={{ p: 3 }}>
+              <Box sx={{ 
+                bgcolor: 'primary.main',
+                color: 'white',
+                p: 2,
+                borderRadius: '8px 8px 0 0',
+                fontWeight: 500
+              }}>
+                Kelola data keuangan desa dengan mudah
+              </Box>
+              <Box sx={{ overflowX: 'auto', width: '100%' }}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Tanggal</TableCell>
+                      <TableCell>Kategori</TableCell>
+                      <TableCell>Keterangan</TableCell>
+                      <TableCell align="right">Nominal</TableCell>
+                      <TableCell align="right">Saldo</TableCell>
+                      <TableCell align="center">Aksi</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                          <CircularProgress />
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredData.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                          <AccountBalanceIcon sx={{ fontSize: 48, color: '#ccc', mb: 2 }} />
+                          <Typography variant="body1" color="textSecondary">
+                            {searchQuery ? 'Tidak ada data yang sesuai dengan pencarian' : 'Belum ada data transaksi'}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredData.map((row, index) => (
+                        <TableRow 
+                          key={index}
+                          sx={{ 
+                            '&:hover': { 
+                              bgcolor: '#f8f9fa',
+                              '& .action-buttons': {
+                                opacity: 1
+                              }
+                            }
+                          }}
+                        >
+                          <TableCell>{row.tanggal}</TableCell>
+                          <TableCell>{row.kategori}</TableCell>
+                          <TableCell sx={{ 
+                            maxWidth: { md: '300px' },
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>{row.keterangan}</TableCell>
+                          <TableCell 
+                            align="right"
+                            sx={{ 
+                              color: row.pemasukan > 0 ? '#2e7d32' : '#d32f2f',
+                              fontWeight: 600,
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {row.pemasukan > 0 
+                              ? `+ ${formatRupiah(row.pemasukan)}`
+                              : `- ${formatRupiah(row.pengeluaran)}`
+                            }
+                          </TableCell>
+                          <TableCell align="right" sx={{ 
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {formatRupiah(row.total_saldo)}
+                          </TableCell>
+                          <TableCell align="center">
+                            <Box 
+                              className="action-buttons"
+                              sx={{ 
+                                opacity: { xs: 1, md: 0.5 },
+                                transition: 'opacity 0.2s',
+                                display: 'flex',
+                                justifyContent: 'center',
+                                gap: 1
+                              }}
+                            >
+                              <IconButton
+                                onClick={() => {
+                                  const jenisTransaksi = row.pemasukan > 0 ? 'pemasukan' : 'pengeluaran';
+                                  const rowData = {
+                                    id: row.id,
+                                    jenis: jenisTransaksi
+                                  };
+                                  if (!rowData.id || !rowData.jenis) {
+                                    setAlert({
+                                      open: true,
+                                      message: `Data tidak valid untuk dihapus (ID: ${rowData.id}, Jenis: ${rowData.jenis})`,
+                                      severity: 'error'
+                                    });
+                                    return;
+                                  }
+                                  handleDelete(rowData.id, rowData.jenis);
+                                }}
+                                color="error"
+                                sx={{ 
+                                  width: { xs: '35px', md: '30px' },
+                                  height: { xs: '35px', md: '30px' }
+                                }}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </Box>
+            </Box>
+          </StyledCard>
+
+          {/* Mobile Card View */}
+          <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+            {filteredData.map((row, index) => (
+              <Card 
+                key={index}
+                sx={{
+                  borderRadius: '16px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  overflow: 'visible',
+                  bgcolor: 'background.paper'
+                }}
+              >
+                <CardContent sx={{ p: 2 }}>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="caption" color="textSecondary">
+                      Tanggal
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      {row.tanggal}
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="caption" color="textSecondary">
+                      Kategori
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      {row.kategori}
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="caption" color="textSecondary">
+                      Keterangan
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      {row.keterangan}
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="caption" color="textSecondary">
+                      Nominal
+                    </Typography>
+                    <Typography 
+                      variant="body1" 
                       sx={{ 
-                        color: row.pemasukan > 0 ? 'success.main' : 'error.main',
-                        fontWeight: 600
+                        fontWeight: 600,
+                        color: row.pemasukan > 0 ? '#2e7d32' : '#d32f2f'
                       }}
                     >
                       {row.pemasukan > 0 
                         ? `+ ${formatRupiah(row.pemasukan)}`
                         : `- ${formatRupiah(row.pengeluaran)}`
                       }
-                    </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600 }}>
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="caption" color="textSecondary">
+                      Saldo
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
                       {formatRupiah(row.total_saldo)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {data.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
-                      <Typography variant="body1" color="textSecondary">
-                        Belum ada data transaksi
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </StyledTableContainer>
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'flex-end',
+                    borderTop: '1px solid',
+                    borderColor: 'divider',
+                    pt: 2,
+                    mt: 2
+                  }}>
+                    <IconButton
+                      onClick={() => {
+                        const jenisTransaksi = row.pemasukan > 0 ? 'pemasukan' : 'pengeluaran';
+                        const rowData = {
+                          id: row.id,
+                          jenis: jenisTransaksi
+                        };
+                        if (!rowData.id || !rowData.jenis) {
+                          setAlert({
+                            open: true,
+                            message: `Data tidak valid untuk dihapus (ID: ${rowData.id}, Jenis: ${rowData.jenis})`,
+                            severity: 'error'
+                          });
+                          return;
+                        }
+                        handleDelete(rowData.id, rowData.jenis);
+                      }}
+                      color="error"
+                      sx={{
+                        width: '40px',
+                        height: '40px',
+                        '&:hover': {
+                          bgcolor: 'error.lighter'
+                        }
+                      }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                </CardContent>
+              </Card>
+            ))}
+            {filteredData.length === 0 && (
+              <Box 
+                sx={{ 
+                  textAlign: 'center', 
+                  py: 8,
+                  bgcolor: 'background.paper',
+                  borderRadius: '16px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                }}
+              >
+                <AccountBalanceIcon sx={{ fontSize: 48, color: '#ccc', mb: 2 }} />
+                <Typography variant="body1" color="textSecondary">
+                  {searchQuery ? 'Tidak ada data yang sesuai dengan pencarian' : 'Belum ada data transaksi'}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+
+          {/* Info Message for Mobile */}
+          <Box sx={{ 
+            display: { xs: 'block', md: 'none' }, 
+            mt: 2,
+            p: 2,
+            bgcolor: 'background.paper',
+            borderRadius: '16px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          }}>
+            <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+              * Tampilan mobile menampilkan data dalam bentuk kartu untuk kemudahan membaca.
+            </Typography>
+          </Box>
         </div>
       )}
     </AnimatedContainer>

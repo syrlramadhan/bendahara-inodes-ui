@@ -32,19 +32,20 @@ export const API_ENDPOINTS = {
     LAPORAN_GET_SALDO: `${API_BASE_URL}/laporan/saldo`,
     LAPORAN_GET_PENGELUARAN: `${API_BASE_URL}/laporan/pengeluaran`,
     LAPORAN_GET_PEMASUKAN: `${API_BASE_URL}/laporan/pemasukan`,
+    LAPORAN_DELETE: (id) => `${API_BASE_URL}/laporan/delete/${id}`,
 
     // Iuran endpoints
     IURAN_ADD: `${API_BASE_URL}/iuran/add`,
     IURAN_UPDATE: `${API_BASE_URL}/iuran/update`,
     IURAN_GET_ALL: `${API_BASE_URL}/iuran/all`,
-    IURAN_DELETE: `${API_BASE_URL}/iuran/delete`,
+    IURAN_DELETE: (id) => `${API_BASE_URL}/iuran/delete/${id}`,
 
     // Sumbangan endpoints
     SUMBANGAN_ADD: `${API_BASE_URL}/sumbangan/add`,
     SUMBANGAN_UPDATE: `${API_BASE_URL}/sumbangan/update`,
     SUMBANGAN_GET_ALL: `${API_BASE_URL}/sumbangan/all`,
-    SUMBANGAN_DELETE: `${API_BASE_URL}/sumbangan/delete`,
     SUMBANGAN_IMAGE: (filename) => `${API_BASE_URL}/image/sumbangan/${filename}`,
+    SUMBANGAN_DELETE: (id) => `${API_BASE_URL}/sumbangan/delete/${id}`,
 };
 
 export const getHeaders = (token = null) => {

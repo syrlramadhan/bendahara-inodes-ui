@@ -16,12 +16,9 @@ import {
   DialogActions,
   TextField,
   Typography,
-  Box,
-  IconButton,
-  Tooltip
+  Box
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
-import DeleteIcon from '@mui/icons-material/Delete'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { API_ENDPOINTS, getHeaders } from '@/config/api'
@@ -170,40 +167,6 @@ export default function Sumbangan() {
     setShowModal(false)
   }
 
-  const handleDeleteRow = async (index) => {
-    if (!window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-      return
-    }
-
-    try {
-      const token = document.cookie.replace(/(?:(?:^|.*;\s*)authToken\s*=\s*([^;]*).*$)|^.*$/, "$1")
-      if (!token) {
-        router.push('/authentication/sign-in')
-        return
-      }
-
-      const dataToDelete = rows[index]
-      const response = await fetch(`${API_ENDPOINTS.SUMBANGAN_DELETE}/${dataToDelete.No}`, {
-        method: 'DELETE',
-        headers: getHeaders(token),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to delete data')
-      }
-
-      // Refresh data after deletion
-      const refreshResponse = await fetch(API_ENDPOINTS.SUMBANGAN_GET_ALL, {
-        headers: getHeaders(token),
-      })
-      const refreshData = await refreshResponse.json()
-      setRows(refreshData)
-    } catch (error) {
-      console.error('Error deleting data:', error)
-      alert('Gagal menghapus data')
-    }
-  }
-
   return (
     <div>
       <Button 
@@ -250,26 +213,15 @@ export default function Sumbangan() {
                 <TableCell>Rp {row.nilai}</TableCell>
                 <TableCell>{row.keterangan}</TableCell>
                 <TableCell>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Tooltip title="Edit">
-                      <IconButton
-                        color="warning"
-                        size="small"
-                        onClick={() => handleEditRow(index)}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Hapus">
-                      <IconButton
-                        color="error"
-                        size="small"
-                        onClick={() => handleDeleteRow(index)}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
+                  <Button
+                    variant="contained"
+                    color="warning"
+                    size="small"
+                    onClick={() => handleEditRow(index)}
+                    startIcon={<EditIcon />}
+                  >
+                    Edit
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}

@@ -170,10 +170,11 @@ export default function Pengeluaran() {
   }
 
   const handleEdit = (row) => {
-    setEditingId(row.id)
+    console.log('Editing row:', row);
+    setEditingId(row.id) // Menggunakan id dari data yang diterima
     setFormData({
       tanggal: row.tanggal,
-      nominal: row.pengeluaran,
+      nominal: row.pengeluaran.toString(),
       keterangan: row.keterangan,
       nota: null
     })
@@ -187,15 +188,30 @@ export default function Pengeluaran() {
   }
 
   const handleDelete = async (id) => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-      try {
-        await laporanService.deleteLaporan(id)
-        showAlertMessage('Data berhasil dihapus', 'success')
-        fetchData()
-      } catch (error) {
-        console.error('Error deleting data:', error)
-        showAlertMessage('Gagal menghapus data', 'error')
-      }
+    if (!id) {
+      console.log('Invalid data:', { id });
+      showAlertMessage('Data tidak valid untuk dihapus (No/ID tidak ditemukan)', 'error');
+      return;
+    }
+
+    // Konfirmasi penghapusan
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus pengeluaran dengan No ${id}?`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await laporanService.deleteLaporan(id, 'pengeluaran');
+      
+      // Refresh data setelah menghapus
+      await fetchData();
+      
+      showAlertMessage(`Pengeluaran dengan No ${id} berhasil dihapus`, 'success');
+    } catch (error) {
+      console.error('Error deleting data:', error);
+      showAlertMessage(`Gagal menghapus pengeluaran: ${error.message}`, 'error');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -219,6 +235,7 @@ export default function Pengeluaran() {
     }
 
     try {
+      setLoading(true);
       const data = {
         tanggal: formData.tanggal,
         nominal: formData.nominal,
@@ -227,13 +244,20 @@ export default function Pengeluaran() {
       }
 
       if (editingId) {
+        console.log('Updating data:', { id: editingId, data });
         // Jika edit dan ada nota baru
         if (formData.nota) {
-          await laporanService.updateLaporan(editingId, data)
+          await laporanService.updateLaporan(editingId, {
+            ...data,
+            jenis: 'pengeluaran'
+          });
         } else {
           // Jika edit tanpa mengubah nota
-          const { nota, ...dataWithoutNota } = data
-          await laporanService.updateLaporan(editingId, dataWithoutNota)
+          const { nota, ...dataWithoutNota } = data;
+          await laporanService.updateLaporan(editingId, {
+            ...dataWithoutNota,
+            jenis: 'pengeluaran'
+          });
         }
         showAlertMessage('Data berhasil diperbarui', 'success')
       } else {
@@ -246,6 +270,8 @@ export default function Pengeluaran() {
     } catch (error) {
       console.error('Error saving data:', error)
       showAlertMessage(error.message || 'Gagal menyimpan data', 'error')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -266,7 +292,10 @@ export default function Pengeluaran() {
   }
 
   return (
-    <Box sx={{ padding: '24px' }}>
+    <Box sx={{ 
+      padding: '24px',
+      mt: { xs: '64px', sm: '80px' }
+    }}>
       <Fade in={showAlert}>
         <Alert 
           severity={alertType}
@@ -447,19 +476,74 @@ export default function Pengeluaran() {
         PaperProps={{
           sx: {
             borderRadius: '16px',
-            boxShadow: '0 4px 20px 0 rgba(0,0,0,0.1)'
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+            background: 'linear-gradient(to bottom, #ffffff, #f8f9fa)',
+            maxHeight: '90vh',
+            margin: '16px',
+            width: 'calc(100% - 32px)'
           }
         }}
       >
         <DialogTitle sx={{ 
           pb: 2,
-          borderBottom: '1px solid #eee',
-          color: '#1a237e',
-          fontWeight: 600
+          pt: 3,
+          px: 3,
+          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+          background: 'linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          '& .MuiTypography-root': {
+            fontSize: '1.5rem',
+            fontWeight: 600,
+            textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+          }
         }}>
-          {editingId ? 'Edit Pengeluaran' : 'Tambah Pengeluaran'}
+          {editingId ? (
+            <>
+              <EditIcon sx={{ fontSize: 28 }} />
+              Edit Pengeluaran
+            </>
+          ) : (
+            <>
+              <AddIcon sx={{ fontSize: 28 }} />
+              Tambah Pengeluaran
+            </>
+          )}
         </DialogTitle>
-        <DialogContent sx={{ py: 3 }}>
+
+        <DialogContent 
+          sx={{ 
+            py: 4,
+            px: { xs: 3, sm: 4 },
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 3,
+            overflowY: 'auto',
+            '&::-webkit-scrollbar': {
+              width: '8px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: '#f1f1f1',
+              borderRadius: '4px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: '#888',
+              borderRadius: '4px',
+              '&:hover': {
+                background: '#666',
+              },
+            },
+          }}
+        >
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500, color: '#1a237e' }}>
+              Informasi Pengeluaran
+            </Typography>
+            <Divider />
+          </Box>
+
           <TextField
             label="Tanggal"
             name="tanggal"
@@ -467,81 +551,183 @@ export default function Pengeluaran() {
             value={formData.tanggal}
             onChange={handleInputChange}
             fullWidth
-            InputLabelProps={{ shrink: true }}
-            sx={{ mb: 2 }}
+            required
+            InputLabelProps={{ 
+              shrink: true,
+              sx: { fontWeight: 500 }
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '12px',
+                '&:hover fieldset': {
+                  borderColor: '#1a237e',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#1a237e',
+                  borderWidth: '2px',
+                }
+              }
+            }}
           />
+
           <TextField
             label="Jumlah"
             name="nominal"
-            type="number"
-            value={formData.nominal}
+            type="text"
+            value={formData.nominal ? parseInt(formData.nominal).toLocaleString('id-ID') : ''}
             onChange={handleInputChange}
             fullWidth
-            sx={{ mb: 2 }}
+            required
             InputProps={{
-              startAdornment: <Typography sx={{ mr: 1, color: '#666' }}>Rp</Typography>
+              startAdornment: (
+                <Typography sx={{ 
+                  mr: 1, 
+                  color: '#666',
+                  fontWeight: 500 
+                }}>
+                  Rp
+                </Typography>
+              ),
+              sx: {
+                borderRadius: '12px',
+                '&:hover': {
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#1a237e',
+                  }
+                },
+                '&.Mui-focused': {
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#1a237e',
+                    borderWidth: '2px',
+                  }
+                }
+              }
             }}
+            placeholder="Contoh: 1.000.000"
           />
+
           <TextField
             label="Keterangan"
             name="keterangan"
             value={formData.keterangan}
             onChange={handleInputChange}
             fullWidth
+            required
             multiline
-            rows={3}
-            sx={{ mb: 2 }}
+            rows={4}
+            placeholder="Masukkan detail keterangan pengeluaran"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '12px',
+                '&:hover fieldset': {
+                  borderColor: '#1a237e',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#1a237e',
+                  borderWidth: '2px',
+                }
+              }
+            }}
           />
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>
+
+          <Box sx={{ mb: 1 }}>
+            <Typography 
+              variant="subtitle1" 
+              sx={{ 
+                mb: 2,
+                fontWeight: 500,
+                color: theme => theme.palette.text.primary,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5
+              }}
+            >
+              <ReceiptIcon sx={{ fontSize: 20 }} />
               Upload Nota *
             </Typography>
-            <input
-              accept="image/*"
-              type="file"
-              name="nota"
-              onChange={handleInputChange}
-              style={{ display: 'none' }}
-              id="nota-upload"
-            />
-            <label htmlFor="nota-upload">
-              <Button
-                variant="outlined"
-                component="span"
-                fullWidth
-                sx={{
-                  borderColor: '#ddd',
-                  color: '#666',
-                  '&:hover': {
-                    borderColor: '#1a237e',
-                    color: '#1a237e'
-                  }
-                }}
-              >
-                {formData.nota ? formData.nota.name : 'Pilih File Nota'}
-              </Button>
-            </label>
-            {previewUrl && (
-              <Box sx={{ mt: 2, textAlign: 'center' }}>
-                <img 
-                  src={previewUrl}
-                  alt="Preview Nota"
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '200px',
-                    borderRadius: '8px'
-                  }}
-                />
-              </Box>
-            )}
+            <Box
+              sx={{
+                border: '2px dashed',
+                borderColor: theme => theme.palette.divider,
+                borderRadius: '12px',
+                p: 4,
+                textAlign: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  borderColor: '#1a237e',
+                  bgcolor: 'rgba(26, 35, 126, 0.04)'
+                }
+              }}
+            >
+              <input
+                accept="image/*"
+                type="file"
+                name="nota"
+                onChange={handleInputChange}
+                style={{ display: 'none' }}
+                id="nota-upload"
+              />
+              <label htmlFor="nota-upload" style={{ cursor: 'pointer' }}>
+                {previewUrl ? (
+                  <Box sx={{ position: 'relative' }}>
+                    <img 
+                      src={previewUrl}
+                      alt="Preview Nota"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '200px',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        display: 'block',
+                        mt: 2,
+                        color: 'text.secondary'
+                      }}
+                    >
+                      Klik untuk mengganti gambar
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ py: 3 }}>
+                    <ReceiptIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                    <Typography variant="body1" sx={{ mb: 1 }}>
+                      Klik atau seret file nota ke sini
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Format yang didukung: JPG, PNG, JPEG (Maks. 5MB)
+                    </Typography>
+                  </Box>
+                )}
+              </label>
+            </Box>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #eee' }}>
+
+        <DialogActions sx={{ 
+          px: 4,
+          py: 3,
+          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+          gap: 2,
+          bgcolor: 'rgba(0, 0, 0, 0.02)'
+        }}>
           <Button 
             onClick={handleClose}
+            variant="outlined"
             sx={{ 
+              borderRadius: '10px',
+              borderColor: '#666',
               color: '#666',
-              '&:hover': { bgcolor: '#f5f5f5' }
+              '&:hover': {
+                borderColor: '#1a237e',
+                color: '#1a237e',
+                bgcolor: 'rgba(26, 35, 126, 0.04)'
+              },
+              px: 3,
+              py: 1
             }}
           >
             Batal
@@ -549,14 +735,29 @@ export default function Pengeluaran() {
           <Button 
             onClick={handleSave}
             variant="contained"
+            disabled={loading}
             sx={{ 
+              borderRadius: '10px',
               bgcolor: '#1a237e',
-              '&:hover': { bgcolor: '#0d47a1' },
-              borderRadius: '8px',
-              px: 3
+              '&:hover': { 
+                bgcolor: '#0d47a1'
+              },
+              px: 3,
+              py: 1,
+              gap: 1
             }}
           >
-            Simpan
+            {loading ? (
+              <>
+                <CircularProgress size={20} color="inherit" />
+                Menyimpan...
+              </>
+            ) : (
+              <>
+                <ReceiptIcon />
+                Simpan
+              </>
+            )}
           </Button>
         </DialogActions>
       </Dialog>
