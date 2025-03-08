@@ -1,70 +1,91 @@
-# Aplikasi Bendahara Desa
+# Aplikasi Bendahara Inodes
 
-Aplikasi manajemen keuangan untuk bendahara desa yang memudahkan pencatatan dan pelaporan keuangan desa.
+Aplikasi manajemen keuangan untuk bendahara desa yang memudahkan pencatatan dan pengelolaan pemasukan serta pengeluaran dana desa.
 
-## Fitur
+## Fitur Utama
 
-- 🔐 **Autentikasi**
-  - Login/logout sistem
-  - Proteksi rute
-  - Manajemen sesi dengan cookies
-- 📊 **Dashboard** - Ringkasan dan visualisasi data keuangan
-- 💰 **Manajemen Kas**
-  - Pencatatan pemasukan
-  - Pencatatan pengeluaran
-  - Monitoring saldo kas desa
-- 📑 **Laporan Keuangan** - Generate laporan keuangan desa
-- 🌓 **Dark Mode** - Tampilan gelap untuk kenyamanan pengguna
-- 📱 **Responsive** - Dapat diakses dari berbagai ukuran layar
+- 📊 Dashboard dengan ringkasan keuangan
+- 💰 Manajemen pemasukan dana
+- 💸 Manajemen pengeluaran dengan upload nota
+- 📑 Laporan keuangan detail
+- 🔒 Sistem autentikasi pengguna
+- 📱 Responsive design (Desktop & Mobile)
 
-## Teknologi
+## Teknologi yang Digunakan
 
-- Next.js 13
-- Material-UI (MUI)
-- Context API untuk state management
-- Cookies & Local Storage untuk autentikasi dan preferensi
+- **Frontend:**
+  - Next.js 13 (App Router)
+  - Material-UI (MUI)
+  - React Hooks
+  - Context API
+
+- **Backend:**
+  - Node.js
+  - Express.js
+  - MySQL
+  - JWT Authentication
 
 ## Instalasi
 
 1. Clone repository
 ```bash
 git clone https://github.com/ameliaendino/bendahara-inodes.git
+cd bendahara-inodes
 ```
 
 2. Install dependencies
 ```bash
 npm install
-# atau
-yarn install
 ```
 
-3. Jalankan aplikasi
+3. Setup environment variables
+```bash
+cp .env.example .env.local
+# Edit .env.local sesuai konfigurasi
+```
+
+4. Jalankan aplikasi
 ```bash
 npm run dev
-# atau
-yarn dev
 ```
 
-4. Buka [http://localhost:5500](http://localhost:5500) di browser
+## Struktur Folder
 
-## Penggunaan
+```
+bendahara-inodes/
+├── src/
+│   ├── app/             # Next.js App Router
+│   ├── components/      # React Components
+│   ├── config/         # Konfigurasi aplikasi
+│   ├── services/       # API Services
+│   └── styles/         # Global styles
+├── public/             # Static files
+└── package.json
+```
 
-1. Login sebagai bendahara
-   - Gunakan username dan password apapun (mode development)
-   - Data login akan disimpan di cookies
-2. Akses menu melalui sidebar:
-   - Dashboard untuk melihat ringkasan
-   - Pemasukan untuk mencatat pendapatan
-   - Pengeluaran untuk mencatat belanja
-   - Kas Desa untuk monitoring saldo
-   - Laporan untuk generate laporan keuangan
-3. Gunakan toggle dark mode di menu settings untuk mengubah tema
-4. Logout melalui tombol di sidebar untuk mengakhiri sesi
+## Fitur Keamanan
+
+- ✅ JWT Authentication
+- 🔐 Protected Routes
+- 🛡️ Input Validation
+- 📝 Activity Logging
 
 ## Kontribusi
 
-Silakan berkontribusi dengan membuat pull request. Untuk perubahan besar, harap buka issue terlebih dahulu untuk mendiskusikan perubahan yang diinginkan.
+Jika Anda ingin berkontribusi pada project ini, silakan:
+
+1. Fork repository
+2. Buat branch fitur baru (`git checkout -b fitur-baru`)
+3. Commit perubahan (`git commit -m 'Menambah fitur baru'`)
+4. Push ke branch (`git push origin fitur-baru`)
+5. Buat Pull Request
 
 ## Lisensi
 
 [MIT License](LICENSE)
+
+## Kontak
+
+Amelia Endino - [@ameliaendino](https://github.com/ameliaendino)
+
+Project Link: [https://github.com/ameliaendino/bendahara-inodes](https://github.com/ameliaendino/bendahara-inodes)
