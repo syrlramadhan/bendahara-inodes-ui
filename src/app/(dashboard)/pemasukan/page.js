@@ -290,19 +290,9 @@ export default function Pemasukan() {
 
       <StyledCard>
         <CardContent>
-          <Typography variant="h4" component="div" sx={{ mb: 2 }}>
-            Data Pemasukan
-          </Typography>
-          <Typography variant="body1" sx={{ mb: 3 }}>
+          <Typography variant="h6" component="div" sx={{ mb: 3, color: '#2e7d32' }}>
             Kelola data pemasukan desa dengan mudah
           </Typography>
-          <Button 
-            variant="contained" 
-            onClick={handleAdd}
-            sx={{ mb: 3 }}
-          >
-            Tambah Pemasukan
-          </Button>
           <TableContainer>
             <Table>
               <TableHead>

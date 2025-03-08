@@ -32,6 +32,7 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
 import MoneyOffIcon from '@mui/icons-material/MoneyOff'
 import ReceiptIcon from '@mui/icons-material/Receipt'
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
 import { styled } from '@mui/material/styles'
 import { laporanService } from '@/services/laporanService'
 import { UPLOAD_URL } from '@/config/api'
@@ -279,19 +280,9 @@ export default function Pengeluaran() {
 
       <StyledCard>
         <CardContent>
-          <Typography variant="h4" component="div" sx={{ mb: 2 }}>
-            Data Pengeluaran
-          </Typography>
-          <Typography variant="body1" sx={{ mb: 3 }}>
+          <Typography variant="h6" component="div" sx={{ mb: 3, color: '#1a237e' }}>
             Kelola data pengeluaran desa dengan mudah
           </Typography>
-          <Button 
-            variant="contained" 
-            onClick={handleAdd}
-            sx={{ mb: 3 }}
-          >
-            Tambah Pengeluaran
-          </Button>
           <TableContainer>
             <Table>
               <TableHead>
@@ -314,7 +305,7 @@ export default function Pengeluaran() {
                 ) : rows.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                      <MoneyOffIcon sx={{ fontSize: 48, color: '#ccc', mb: 2 }} />
+                      <AccountBalanceIcon sx={{ fontSize: 48, color: '#ccc', mb: 2 }} />
                       <Typography variant="body1" color="textSecondary">
                         Belum ada data pengeluaran
                       </Typography>
