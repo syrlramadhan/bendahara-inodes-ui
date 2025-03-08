@@ -1,12 +1,12 @@
 /** @type {import('next').NextConfig} */
-const NGROK_URL = 'https://localhost:8087';
+const NGROK_URL = 'http://192.168.1.85:8087';
 
 const nextConfig = {
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: NGROK_URL.replace('https://', ''),
+        hostname: NGROK_URL.replace('http://', ''),
         port: '',
         pathname: '/**',
       },
