@@ -47,14 +47,49 @@ const StyledCard = styled(Card)(({ theme }) => ({
 
 const HeaderBox = styled(Box)(({ theme }) => ({
   background: 'linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)',
-  padding: '32px',
+  padding: '24px',
   color: 'white',
   borderRadius: '16px',
-  marginBottom: '24px',
+  marginBottom: { xs: '8px', sm: '24px' },
   display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
+  flexDirection: 'column',
+  gap: '16px',
   boxShadow: '0 4px 20px 0 rgba(0,0,0,0.1)'
+}))
+
+const AddButton = styled(Button)(({ theme }) => ({
+  backgroundColor: 'white',
+  color: '#1a237e',
+  borderRadius: '12px',
+  textTransform: 'none',
+  fontWeight: 600,
+  padding: '12px',
+  width: '100%',
+  fontSize: '1rem',
+  marginBottom: '16px',
+  '&:hover': {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    boxShadow: '0 8px 16px 0 rgba(0,0,0,0.1)'
+  },
+  [theme.breakpoints.up('sm')]: {
+    display: 'none'
+  }
+}))
+
+const DesktopAddButton = styled(Button)(({ theme }) => ({
+  backgroundColor: 'white',
+  color: '#1a237e',
+  borderRadius: '12px',
+  textTransform: 'none',
+  fontWeight: 600,
+  padding: '12px 24px',
+  '&:hover': {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    boxShadow: '0 8px 16px 0 rgba(0,0,0,0.1)'
+  },
+  [theme.breakpoints.down('sm')]: {
+    display: 'none'
+  }
 }))
 
 const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
@@ -257,34 +292,30 @@ export default function Pengeluaran() {
             Total Pengeluaran: {formatCurrency(totalPengeluaran)}
           </Typography>
         </Box>
-        <Button
+        <DesktopAddButton
           variant="contained"
           startIcon={<AddIcon />}
           onClick={handleAdd}
-          sx={{
-            bgcolor: 'white',
-            color: '#1a237e',
-            '&:hover': { 
-              bgcolor: 'rgba(255,255,255,0.9)',
-              boxShadow: '0 8px 16px 0 rgba(0,0,0,0.1)'
-            },
-            borderRadius: '12px',
-            textTransform: 'none',
-            fontWeight: 600,
-            px: 3
-          }}
         >
           Tambah Pengeluaran
-        </Button>
+        </DesktopAddButton>
       </HeaderBox>
+
+      <AddButton
+        variant="contained"
+        startIcon={<AddIcon />}
+        onClick={handleAdd}
+      >
+        Tambah Pengeluaran
+      </AddButton>
 
       <StyledCard>
         <CardContent>
           <Typography variant="h6" component="div" sx={{ mb: 3, color: '#1a237e' }}>
             Kelola data pengeluaran desa dengan mudah
           </Typography>
-          <TableContainer>
-            <Table>
+          <Box sx={{ overflowX: 'auto', width: '100%' }}>
+            <Table sx={{ minWidth: 650 }}>
               <TableHead>
                 <TableRow>
                   <TableCell>No</TableCell>
@@ -326,16 +357,31 @@ export default function Pengeluaran() {
                     >
                       <TableCell>{index + 1}</TableCell>
                       <TableCell>{row.tanggal}</TableCell>
-                      <TableCell sx={{ color: '#d32f2f', fontWeight: 600 }}>
+                      <TableCell sx={{ 
+                        color: '#d32f2f', 
+                        fontWeight: 600,
+                        whiteSpace: 'nowrap'
+                      }}>
                         {formatCurrency(row.pengeluaran)}
                       </TableCell>
-                      <TableCell>{row.keterangan}</TableCell>
+                      <TableCell sx={{ 
+                        maxWidth: { xs: '120px', sm: '200px' },
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {row.keterangan}
+                      </TableCell>
                       <TableCell>
                         {row.nota ? (
                           <IconButton
                             size="small"
                             onClick={() => window.open(`${UPLOAD_URL}${row.nota}`, '_blank')}
-                            sx={{ color: '#1a237e' }}
+                            sx={{ 
+                              color: '#1a237e',
+                              width: { xs: '35px', sm: '30px' },
+                              height: { xs: '35px', sm: '30px' }
+                            }}
                           >
                             <ReceiptIcon />
                           </IconButton>
@@ -349,15 +395,22 @@ export default function Pengeluaran() {
                         <Box 
                           className="action-buttons"
                           sx={{ 
-                            opacity: 0.5,
-                            transition: 'opacity 0.2s'
+                            opacity: { xs: 1, sm: 0.5 },
+                            transition: 'opacity 0.2s',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            gap: 1
                           }}
                         >
                           <Tooltip title="Edit">
                             <IconButton 
                               size="small" 
                               onClick={() => handleEdit(row)}
-                              sx={{ color: '#1a237e', mr: 1 }}
+                              sx={{ 
+                                color: '#1a237e',
+                                width: { xs: '35px', sm: '30px' },
+                                height: { xs: '35px', sm: '30px' }
+                              }}
                             >
                               <EditIcon />
                             </IconButton>
@@ -366,7 +419,11 @@ export default function Pengeluaran() {
                             <IconButton 
                               size="small" 
                               onClick={() => handleDelete(row.id)}
-                              sx={{ color: '#d32f2f' }}
+                              sx={{ 
+                                color: '#d32f2f',
+                                width: { xs: '35px', sm: '30px' },
+                                height: { xs: '35px', sm: '30px' }
+                              }}
                             >
                               <DeleteIcon />
                             </IconButton>
@@ -378,7 +435,7 @@ export default function Pengeluaran() {
                 )}
               </TableBody>
             </Table>
-          </TableContainer>
+          </Box>
         </CardContent>
       </StyledCard>
 

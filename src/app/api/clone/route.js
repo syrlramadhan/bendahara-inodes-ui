@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 const cloneIuran = async (token, data) => {
-  const response = await fetch('https://009d-114-125-221-46.ngrok-free.app/api/iuran/add', {
+  const response = await fetch('https://6d29-140-213-217-131.ngrok-free.app/api/iuran/add', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -21,7 +21,7 @@ const cloneSumbangan = async (token, data) => {
   formData.append('nilai', data.nilai)
   formData.append('keterangan', data.keterangan)
 
-  const response = await fetch('https://009d-114-125-221-46.ngrok-free.app/sumbangan/add', {
+  const response = await fetch('https://6d29-140-213-217-131.ngrok-free.app/api/sumbangan/add', {
     method: 'POST',
     body: formData
   })
@@ -35,7 +35,7 @@ const clonePengeluaran = async (token, data) => {
   formData.append('nilai', data.nilai)
   formData.append('keterangan', data.keterangan)
 
-  const response = await fetch('https://009d-114-125-221-46.ngrok-free.app/pengeluaran/add', {
+  const response = await fetch('https://6d29-140-213-217-131.ngrok-free.app/api/pengeluaran/add', {
     method: 'POST',
     body: formData
   })

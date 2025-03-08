@@ -43,7 +43,7 @@ export default function Iuran() {
           return
         }
 
-        const response = await fetch('https://009d-114-125-221-46.ngrok-free.app/api/iuran/all', {
+        const response = await fetch('https://6d29-140-213-217-131.ngrok-free.app/api/iuran/all', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -107,7 +107,7 @@ export default function Iuran() {
         return
       }
 
-      const response = await fetch('https://009d-114-125-221-46.ngrok-free.app/api/iuran/update', {
+      const response = await fetch('https://6d29-140-213-217-131.ngrok-free.app/api/iuran/update', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -125,7 +125,7 @@ export default function Iuran() {
       setShowModal(false)
       
       // Refresh data
-      const refreshResponse = await fetch('https://009d-114-125-221-46.ngrok-free.app/api/iuran/all', {
+      const refreshResponse = await fetch('https://6d29-140-213-217-131.ngrok-free.app/api/iuran/all', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },

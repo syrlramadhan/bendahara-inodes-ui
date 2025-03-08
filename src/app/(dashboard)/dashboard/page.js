@@ -22,9 +22,9 @@ const StyledCard = styled(Card)`
   background: ${({ variant }) => {
     const gradients = {
       blue: 'linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)',
-      green: 'linear-gradient(135deg, #2e7d32 0%, #4caf50 100%)',
-      red: 'linear-gradient(135deg, #c62828 0%, #d32f2f 100%)',
-      purple: 'linear-gradient(135deg, #4a148c 0%, #6a1b9a 100%)'
+      green: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)',
+      red: 'linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%)',
+      purple: 'linear-gradient(135deg, #1a237e 0%, #311b92 100%)'
     };
     return gradients[variant] || gradients.blue;
   }};
@@ -137,7 +137,7 @@ export default function Dashboard() {
     <ThemeProvider theme={theme}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, padding: { xs: '16px', sm: '24px', md: '32px' } }}>
         {/* Welcome Card */}
-        <StyledCard variant="purple">
+        <StyledCard variant="blue">
           <ContentWrapper>
             <Box>
               <Typography variant="h3" component="div" sx={{

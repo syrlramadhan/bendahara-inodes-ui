@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { styled, keyframes } from '@mui/material/styles';
+import { styled } from '@mui/material/styles';
 import {
   Box,
   Drawer,
@@ -9,45 +9,19 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  IconButton,
   Typography,
-  Collapse,
-  useTheme
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
-  AccountBalance as AccountBalanceIcon,
   Assessment as AssessmentIcon,
-  Menu as MenuIcon,
-  ChevronLeft as ChevronLeftIcon,
   Person as PersonIcon
 } from '@mui/icons-material';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 
 const drawerWidth = 280;
-
-const slideIn = keyframes`
-  from {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-`;
-
-const fadeIn = keyframes`
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-`;
 
 const StyledDrawer = styled(Drawer)`
   width: ${drawerWidth}px;
@@ -59,134 +33,168 @@ const StyledDrawer = styled(Drawer)`
     background: linear-gradient(180deg, #1a237e 0%, #0d47a1 100%);
     color: white;
     border-right: none;
-    animation: ${slideIn} 0.3s ease-out;
   }
 `;
 
-const DrawerHeader = styled(Box)`
+const Header = styled(Box)`
+  padding: 24px 20px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.1);
+  gap: 16px;
 `;
 
-const Logo = styled(Box)`
+const HeaderText = styled(Box)`
   display: flex;
-  align-items: center;
-  gap: 12px;
-  animation: ${fadeIn} 0.5s ease-out;
+  flex-direction: column;
 `;
 
 const StyledListItem = styled(ListItem)`
-  margin: 8px 16px;
-  border-radius: 12px;
-  transition: all 0.3s ease;
+  margin: 4px 16px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  color: rgba(255, 255, 255, 0.7);
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateX(5px);
+    background: #4caf50;
+    transform: none;
+    box-shadow: none;
+    color: #fff;
   }
 
   &.active {
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(10px);
+    background: #4caf50;
+    color: #fff;
+    
+    .MuiListItemIcon-root {
+      color: #fff;
+    }
+    
+    .MuiTypography-root {
+      font-weight: 600;
+      color: #fff;
+    }
   }
 
   .MuiListItemIcon-root {
-    color: white;
+    color: inherit;
     min-width: 40px;
+    transition: color 0.2s ease;
   }
 
-  animation: ${fadeIn} 0.5s ease-out;
+  .MuiTypography-root {
+    color: inherit;
+    transition: color 0.2s ease;
+  }
 `;
 
 const menuItems = [
   { title: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
   { title: 'Pemasukan', icon: <TrendingUpIcon />, path: '/pemasukan' },
   { title: 'Pengeluaran', icon: <TrendingDownIcon />, path: '/pengeluaran' },
-  { title: 'Laporan', icon: <AssessmentIcon />, path: '/laporan' },
+  { title: 'Laporan Keuangan', icon: <AssessmentIcon />, path: '/laporan' },
 ];
 
 export default function Sidebar() {
-  const [open, setOpen] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
-  const theme = useTheme();
-
-  const handleDrawerToggle = () => {
-    setOpen(!open);
-  };
 
   const handleNavigation = (path) => {
     router.push(path);
   };
 
   return (
-    <StyledDrawer
-      variant="permanent"
-      open={open}
-    >
-      <DrawerHeader>
-        <Logo>
-          <Image
-            src="/image.png"
-            alt="Logo"
-            width={40}
-            height={40}
-            style={{ borderRadius: '50%' }}
-          />
-          <Typography variant="h6" sx={{ fontWeight: 600, display: open ? 'block' : 'none' }}>
-            Bendahara Desa
+    <StyledDrawer variant="permanent">
+      <Header>
+        <Image
+          src="/image.png"
+          alt="Logo"
+          width={60}
+          height={60}
+          style={{ borderRadius: '50%' }}
+        />
+        <HeaderText>
+          <Typography
+            variant="h6"
+            sx={{
+              color: '#fff',
+              fontWeight: 600,
+              fontSize: '1.1rem',
+              lineHeight: 1.2,
+              mb: 0.5
+            }}
+          >
+            Desa Bonto Ujung
           </Typography>
-        </Logo>
-        <IconButton onClick={handleDrawerToggle} sx={{ color: 'white' }}>
-          {open ? <ChevronLeftIcon /> : <MenuIcon />}
-        </IconButton>
-      </DrawerHeader>
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'rgba(255, 255, 255, 0.7)',
+              fontSize: '0.8rem',
+              fontWeight: 500,
+              mb: 1
+            }}
+          >
+            Kec. Tarowang, Kab. Jeneponto
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'rgba(255, 255, 255, 0.9)',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              letterSpacing: '0.5px',
+              textTransform: 'uppercase',
+              borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+              pt: 1
+            }}
+          >
+            MENU BENDAHARA
+          </Typography>
+        </HeaderText>
+      </Header>
 
-      <Box sx={{ mt: 2 }}>
-        <List>
-          {menuItems.map((item, index) => (
-            <StyledListItem
-              key={item.title}
-              button
-              onClick={() => handleNavigation(item.path)}
-              className={pathname === item.path ? 'active' : ''}
-              sx={{
-                animation: `${fadeIn} 0.5s ease-out ${index * 0.1}s`,
+      <List sx={{ mt: 2 }}>
+        {menuItems.map((item) => (
+          <StyledListItem
+            key={item.title}
+            button
+            onClick={() => handleNavigation(item.path)}
+            className={pathname === item.path ? 'active' : ''}
+          >
+            <ListItemIcon>{item.icon}</ListItemIcon>
+            <ListItemText
+              primary={item.title}
+              primaryTypographyProps={{
+                sx: {
+                  fontSize: '0.95rem',
+                  fontWeight: pathname === item.path ? 600 : 400
+                }
               }}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText 
-                primary={item.title} 
-                sx={{
-                  opacity: open ? 1 : 0,
-                  transition: 'opacity 0.3s ease',
-                }}
-              />
-            </StyledListItem>
-          ))}
-        </List>
-      </Box>
+            />
+          </StyledListItem>
+        ))}
+      </List>
 
-      <Box sx={{ mt: 'auto', mb: 2, px: 2 }}>
+      <Box sx={{ mt: 'auto', mb: 2 }}>
         <StyledListItem
           button
+          onClick={() => router.push('/authentication/sign-in')}
           sx={{
-            background: 'rgba(255, 255, 255, 0.1)',
+            color: 'rgba(255, 255, 255, 0.7)',
             '&:hover': {
-              background: 'rgba(255, 255, 255, 0.2)',
+              background: 'rgba(255, 255, 255, 0.1)',
+              color: '#fff'
             }
           }}
         >
           <ListItemIcon>
-            <PersonIcon />
+            <PersonIcon sx={{ color: 'inherit' }} />
           </ListItemIcon>
-          <ListItemText 
-            primary="Admin Bendahara"
-            secondary="admin@desa.id"
-            secondaryTypographyProps={{ sx: { color: 'rgba(255, 255, 255, 0.7)' } }}
+          <ListItemText
+            primary="Logout"
+            primaryTypographyProps={{
+              sx: { fontSize: '0.95rem' }
+            }}
           />
         </StyledListItem>
       </Box>

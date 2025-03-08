@@ -46,7 +46,7 @@ export default function Sumbangan() {
           return
         }
 
-        const response = await fetch('https://009d-114-125-221-46.ngrok-free.app/sumbangan/all', {
+        const response = await fetch('https://6d29-140-213-217-131.ngrok-free.app/api/sumbangan/all', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -108,8 +108,8 @@ export default function Sumbangan() {
 
     const newFormData = new FormData()
     let url = formData.No 
-      ? "https://009d-114-125-221-46.ngrok-free.app/sumbangan/update"
-      : "https://009d-114-125-221-46.ngrok-free.app/sumbangan/add"
+      ? "https://6d29-140-213-217-131.ngrok-free.app/api/sumbangan/update"
+      : "https://6d29-140-213-217-131.ngrok-free.app/api/sumbangan/add"
 
     if (!formData.No && !formData.notaImage) {
       alert("Harap mengisi image")
@@ -146,7 +146,7 @@ export default function Sumbangan() {
       
       // Refresh data
       const token = document.cookie.replace(/(?:(?:^|.*;\s*)authToken\s*=\s*([^;]*).*$)|^.*$/, "$1")
-      const refreshResponse = await fetch('https://009d-114-125-221-46.ngrok-free.app/sumbangan/all', {
+      const refreshResponse = await fetch('https://6d29-140-213-217-131.ngrok-free.app/api/sumbangan/all', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -206,7 +206,7 @@ export default function Sumbangan() {
                   {row.nota ? (
                     <Box sx={{ width: 50, height: 50, position: 'relative' }}>
                       <Image
-                        src={`https://009d-114-125-221-46.ngrok-free.app/image/sumbangan/${row.nota}`}
+                        src={`https://6d29-140-213-217-131.ngrok-free.app/api/image/sumbangan/${row.nota}`}
                         alt="Nota"
                         fill
                         style={{ objectFit: 'cover' }}
