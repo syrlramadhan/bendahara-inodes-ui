@@ -64,6 +64,7 @@ export const laporanService = {
                         pemasukan: 0,
                         pengeluaran: parseInt(item.nominal),
                         jenis: 'pengeluaran',
+                        nota: item.nota,
                         total_saldo: 0 // akan dihitung nanti
                     };
                 })
