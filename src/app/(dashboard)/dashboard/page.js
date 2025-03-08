@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Typography, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, Button, Grid } from '@mui/material'
+import { Box, Typography, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, Button, Grid, CircularProgress } from '@mui/material'
 import { createTheme, ThemeProvider, styled } from '@mui/material/styles'
 import { Card, CardHeader, CardBody } from '@/components/ui/card'
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
@@ -10,6 +10,7 @@ import SearchHistory from '@/components/dashboard/search-history'
 import { colors } from '@/styles/colors'
 import { useState, useEffect } from 'react'
 import { laporanService } from '@/services/laporanService'
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
 
 const theme = createTheme({
   typography: {
@@ -72,6 +73,8 @@ const HistoryCard = styled(Card)`
 export default function Dashboard() {
   const [openBiodata, setOpenBiodata] = useState(false)
   const [laporan, setLaporan] = useState([])
+  const [filteredLaporan, setFilteredLaporan] = useState([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [totalSaldo, setTotalSaldo] = useState(0)
   const [totalPemasukan, setTotalPemasukan] = useState(0)
   const [totalPengeluaran, setTotalPengeluaran] = useState(0)
@@ -87,6 +90,7 @@ export default function Dashboard() {
         
         if (Array.isArray(data)) {
           setLaporan(data)
+          setFilteredLaporan(data)
           
           let saldo = 0
           let pemasukan = 0
@@ -115,6 +119,20 @@ export default function Dashboard() {
 
     fetchData()
   }, [])
+
+  useEffect(() => {
+    // Filter data berdasarkan pencarian
+    const filtered = laporan.filter(item => 
+      item.keterangan?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.kategori?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.tanggal?.includes(searchQuery)
+    )
+    setFilteredLaporan(filtered)
+  }, [searchQuery, laporan])
+
+  const handleSearch = (value) => {
+    setSearchQuery(value)
+  }
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', {
@@ -230,7 +248,13 @@ export default function Dashboard() {
                 History Transaksi
               </Typography>
             }
-            action={<SearchHistory placeholder="Cari transaksi..." />}
+            action={
+              <SearchHistory 
+                placeholder="Cari transaksi..." 
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+            }
             sx={{ borderBottom: '1px solid #eee', p: 3 }}
           />
           <CardBody sx={{ p: 0 }}>
@@ -245,42 +269,57 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {laporan.map((item, index) => (
-                    <tr key={index} style={{ borderBottom: '1px solid #eee' }}>
-                      <td style={{ padding: '16px' }}>{item.tanggal}</td>
-                      <td style={{ padding: '16px' }}>{item.keterangan}</td>
-                      <td style={{ padding: '16px' }}>
-                        <Box sx={{
-                          display: 'inline-block',
-                          px: 2,
-                          py: 0.5,
-                          borderRadius: '6px',
-                          bgcolor: item.pengeluaran > 0 ? 'rgba(211, 47, 47, 0.1)' : 'rgba(46, 125, 50, 0.1)',
-                          color: item.pengeluaran > 0 ? '#d32f2f' : '#2e7d32',
-                          fontWeight: 500
-                        }}>
-                          {item.pengeluaran > 0 ? 'Pengeluaran' : 'Pemasukan'}
-                        </Box>
-                      </td>
-                      <td style={{
-                        padding: '16px',
-                        textAlign: 'right',
-                        color: item.pengeluaran > 0 ? '#d32f2f' : '#2e7d32',
-                        fontWeight: 600,
-                      }}>
-                        {item.pengeluaran > 0 
-                          ? `- ${formatCurrency(item.pengeluaran)}`
-                          : `+ ${formatCurrency(item.pemasukan)}`
-                        }
-                      </td>
-                    </tr>
-                  ))}
-                  {laporan.length === 0 && (
+                  {loading ? (
                     <tr>
-                      <td colSpan={4} style={{ textAlign: 'center', padding: '32px', color: '#666' }}>
-                        Belum ada data transaksi
+                      <td colSpan={4} style={{ textAlign: 'center', padding: '32px' }}>
+                        <CircularProgress />
                       </td>
                     </tr>
+                  ) : filteredLaporan.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center', padding: '32px' }}>
+                        <AccountBalanceIcon style={{ fontSize: 48, color: '#ccc', marginBottom: 16 }} />
+                        <Typography variant="body1" color="textSecondary">
+                          {searchQuery ? 'Tidak ada data yang sesuai dengan pencarian' : 'Belum ada data transaksi'}
+                        </Typography>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredLaporan.map((item, index) => (
+                      <tr key={index} style={{ 
+                        borderBottom: '1px solid #eee',
+                        backgroundColor: index % 2 === 0 ? '#fff' : '#fafafa'
+                      }}>
+                        <td style={{ padding: '16px' }}>{item.tanggal}</td>
+                        <td style={{ padding: '16px' }}>{item.keterangan}</td>
+                        <td style={{ padding: '16px' }}>
+                          <Box
+                            sx={{
+                              display: 'inline-block',
+                              px: 2,
+                              py: 0.5,
+                              borderRadius: '12px',
+                              bgcolor: item.pemasukan > 0 ? '#e8f5e9' : '#ffebee',
+                              color: item.pemasukan > 0 ? '#2e7d32' : '#d32f2f',
+                              fontWeight: 500
+                            }}
+                          >
+                            {item.pemasukan > 0 ? 'Pemasukan' : 'Pengeluaran'}
+                          </Box>
+                        </td>
+                        <td style={{ 
+                          padding: '16px', 
+                          textAlign: 'right',
+                          color: item.pemasukan > 0 ? '#2e7d32' : '#d32f2f',
+                          fontWeight: 600
+                        }}>
+                          {item.pemasukan > 0 
+                            ? `+ ${formatCurrency(item.pemasukan)}`
+                            : `- ${formatCurrency(item.pengeluaran)}`
+                          }
+                        </td>
+                      </tr>
+                    ))
                   )}
                 </tbody>
               </table>
