@@ -27,7 +27,6 @@ const menuItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
   { text: 'Pemasukan', icon: <PaymentsIcon />, path: '/pemasukan' },
   { text: 'Pengeluaran', icon: <ReceiptIcon />, path: '/pengeluaran' },
-  { text: 'Kas Desa', icon: <AccountBalanceWalletIcon />, path: '/kas-desa' },
   { text: 'Laporan Keuangan', icon: <AssessmentIcon />, path: '/laporan' },
 ]
 

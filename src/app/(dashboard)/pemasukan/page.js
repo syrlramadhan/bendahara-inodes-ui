@@ -97,11 +97,31 @@ export default function Pemasukan() {
   }
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+    const { name, value } = e.target;
+    
+    if (name === 'nominal') {
+      // Hapus semua karakter non-digit
+      const numericValue = value.replace(/\D/g, '');
+      
+      // Batasi maksimal 11 digit (puluhan milyar)
+      if (numericValue.length > 11) {
+        showAlertMessage('Nominal terlalu besar (maksimal puluhan milyar)', 'error');
+        return;
+      }
+
+      // Format dengan separator ribuan
+      const formattedValue = numericValue === '' ? '' : parseInt(numericValue).toLocaleString('id-ID');
+      
+      setFormData(prev => ({
+        ...prev,
+        [name]: numericValue // Simpan nilai numerik tanpa format
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   }
 
   const handleAdd = () => {
@@ -400,14 +420,15 @@ export default function Pemasukan() {
           <TextField
             label="Jumlah"
             name="nominal"
-            type="number"
-            value={formData.nominal}
+            type="text"
+            value={formData.nominal ? parseInt(formData.nominal).toLocaleString('id-ID') : ''}
             onChange={handleInputChange}
             fullWidth
             sx={{ mb: 2 }}
             InputProps={{
               startAdornment: <Typography sx={{ mr: 1, color: '#666' }}>Rp</Typography>
             }}
+            placeholder="Contoh: 1.000.000"
           />
           <TextField
             label="Kategori"

@@ -95,6 +95,11 @@ export const laporanService = {
                 throw new Error('Nominal harus berupa angka positif');
             }
 
+            // Validasi maksimal nominal (11 digit - puluhan milyar)
+            if (nominal.toString().length > 11) {
+                throw new Error('Nominal terlalu besar (maksimal puluhan milyar)');
+            }
+
             // Validasi kategori
             if (!data.kategori || data.kategori.trim() === '') {
                 throw new Error('Kategori tidak boleh kosong');

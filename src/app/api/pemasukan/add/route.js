@@ -40,6 +40,14 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
+        // Validasi maksimal nominal
+        if (data.nominal.toString().length > 11) {
+            return NextResponse.json({
+                success: false,
+                message: 'Nominal terlalu besar (maksimal puluhan milyar)'
+            }, { status: 400 });
+        }
+
         // Validasi kategori
         if (!data.kategori.trim()) {
             return NextResponse.json({
