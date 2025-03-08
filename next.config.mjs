@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-const NGROK_URL = 'https://6d29-140-213-217-131.ngrok-free.app';
+const NGROK_URL = 'https://localhost:8087';
 
 const nextConfig = {
   images: {

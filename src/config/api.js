@@ -1,4 +1,4 @@
-export const NGROK_URL = 'https://6d29-140-213-217-131.ngrok-free.app';
+export const NGROK_URL = 'https://localhost:8087';
 export const API_BASE_URL = `${NGROK_URL}/api`;
 export const UPLOAD_URL = `${API_BASE_URL}/uploads/`;
 
