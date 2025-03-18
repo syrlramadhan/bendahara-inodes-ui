@@ -108,7 +108,8 @@ export default function Pemasukan() {
     tanggal: '',
     nominal: '',
     keterangan: '',
-    kategori: ''
+    kategori: '',
+    waktu: ''
   })
   const [showAlert, setShowAlert] = useState(false)
   const [alertMessage, setAlertMessage] = useState('')
@@ -153,9 +154,60 @@ export default function Pemasukan() {
         ...prev,
         [name]: numericValue // Simpan nilai numerik tanpa format
       }));
+    } else if (name === 'tanggal') {
+      try {
+        // Jika input kosong, izinkan
+        if (!value) {
+          setFormData(prev => ({
+            ...prev,
+            [name]: ''
+          }));
+          return;
+        }
+
+        // Validasi tanggal
+        const date = new Date(value);
+        if (isNaN(date.getTime())) {
+          showAlertMessage('Tanggal tidak valid', 'error');
+          return;
+        }
+
+        setFormData(prev => ({
+          ...prev,
+          [name]: value
+        }));
+      } catch (error) {
+        console.error('Error formatting date:', error);
+        showAlertMessage('Format tanggal tidak valid', 'error');
+      }
+    } else if (name === 'waktu') {
+      try {
+        // Format waktu ke HH:mm
+        let formattedTime = value;
+        const timeParts = value.split(':');
+        
+        if (timeParts.length > 0) {
+          const hours = timeParts[0].padStart(2, '0');
+          const minutes = (timeParts[1] || '00').padStart(2, '0');
+          formattedTime = `${hours}:${minutes}`;
+        }
+
+        // Validasi format waktu
+        const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
+        if (!timeRegex.test(formattedTime)) {
+          return; // Jangan update jika format tidak valid
+        }
+
+        setFormData(prev => ({
+          ...prev,
+          [name]: formattedTime
+        }));
+      } catch (error) {
+        console.error('Error formatting time:', error);
+      }
     } else {
       setFormData(prev => ({
-        ...prev,
+                ...prev,
         [name]: value
       }));
     }
@@ -163,23 +215,35 @@ export default function Pemasukan() {
 
   const handleAdd = () => {
     setEditingId(null)
+    // Set default waktu ke waktu sekarang
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    
     setFormData({
       tanggal: '',
       nominal: '',
       keterangan: '',
-      kategori: ''
+      kategori: '',
+      waktu: `${hours}:${minutes}`
     })
     setShowModal(true)
   }
 
   const handleEdit = (row) => {
     console.log('Editing row:', row);
-    setEditingId(row.id) // Menggunakan id dari data yang diterima
+    // Konversi format tanggal dari DD-MM-YYYY ke YYYY-MM-DD untuk input
+    const [date, time] = row.tanggal.split(' ');
+    const [day, month, year] = date.split('-');
+    const formattedDate = `${year}-${month}-${day}`;
+    
+    setEditingId(row.id)
     setFormData({
-      tanggal: row.tanggal,
+      tanggal: formattedDate,
       nominal: row.pemasukan.toString(),
       keterangan: row.keterangan,
-      kategori: row.kategori || ''
+      kategori: row.kategori || '',
+      waktu: time
     })
     setShowModal(true)
   }
@@ -221,48 +285,28 @@ export default function Pemasukan() {
 
   const handleSave = async () => {
     try {
-      // Validasi tanggal
-      if (!formData.tanggal) {
-        showAlertMessage('Tanggal harus diisi', 'error');
+      // Validasi input
+      if (!formData.tanggal || !formData.waktu || !formData.nominal || !formData.kategori || !formData.keterangan) {
+        showAlertMessage('Semua field harus diisi', 'error');
         return;
       }
 
-      // Validasi format tanggal
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(formData.tanggal)) {
-        showAlertMessage('Format tanggal tidak valid (YYYY-MM-DD)', 'error');
-        return;
-      }
+      // Format tanggal dari YYYY-MM-DD ke DD-MM-YYYY HH:mm
+      const [year, month, day] = formData.tanggal.split('-');
+      const tanggalLengkap = `${day}-${month}-${year} ${formData.waktu}`;
 
-      // Validasi nominal
-      if (!formData.nominal || isNaN(formData.nominal) || parseFloat(formData.nominal) <= 0) {
-        showAlertMessage('Nominal harus berupa angka positif', 'error');
-        return;
-      }
+      const data = {
+        tanggal: tanggalLengkap,
+        kategori: formData.kategori,
+        keterangan: formData.keterangan,
+        nominal: parseInt(formData.nominal)
+      };
 
-      // Validasi kategori
-      if (!formData.kategori || formData.kategori.trim() === '') {
-        showAlertMessage('Kategori tidak boleh kosong', 'error');
-        return;
-      }
-
-      // Validasi keterangan
-      if (!formData.keterangan || formData.keterangan.trim() === '') {
-        showAlertMessage('Keterangan tidak boleh kosong', 'error');
-        return;
-      }
+      console.log('Data yang akan dikirim:', data);
 
       setLoading(true);
 
-      const data = {
-        tanggal: formData.tanggal,
-        nominal: parseFloat(formData.nominal),
-        kategori: formData.kategori.trim(),
-        keterangan: formData.keterangan.trim()
-      };
-
       if (editingId) {
-        console.log('Updating data:', { id: editingId, data });
         await laporanService.updateLaporan(editingId, {
           ...data,
           jenis: 'pemasukan'
@@ -387,7 +431,7 @@ export default function Pemasukan() {
                       }}
                     >
                       <TableCell>{index + 1}</TableCell>
-                      <TableCell>{row.tanggal}</TableCell>
+                      <TableCell>{row.tanggal.split('T')[0]}</TableCell>
                       <TableCell sx={{ 
                         color: '#2e7d32', 
                         fontWeight: 600,
@@ -527,31 +571,73 @@ export default function Pemasukan() {
             <Divider />
           </Box>
 
-          <TextField
-            label="Tanggal"
-            name="tanggal"
-            type="date"
-            value={formData.tanggal}
-            onChange={handleInputChange}
-            fullWidth
-            required
-            InputLabelProps={{ 
-              shrink: true,
-              sx: { fontWeight: 500 }
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '12px',
-                '&:hover fieldset': {
-                  borderColor: '#2e7d32',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: '#2e7d32',
-                  borderWidth: '2px',
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 2,
+            width: '100%'
+          }}>
+            <TextField
+              label="Tanggal"
+              name="tanggal"
+              type="date"
+              value={formData.tanggal}
+              onChange={handleInputChange}
+              fullWidth
+              required
+              InputLabelProps={{ 
+                shrink: true,
+                sx: { fontWeight: 500 }
+              }}
+              inputProps={{
+                max: '9999-12-31'
+              }}
+              helperText="Pilih tanggal"
+              sx={{
+                flex: 2,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '12px',
+                  '&:hover fieldset': {
+                    borderColor: '#2e7d32',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#2e7d32',
+                    borderWidth: '2px',
+                  }
                 }
-              }
-            }}
-          />
+              }}
+            />
+
+            <TextField
+              label="Waktu"
+              name="waktu"
+              type="time"
+              value={formData.waktu || ''}
+              onChange={handleInputChange}
+              fullWidth
+              required
+              InputLabelProps={{ 
+                shrink: true,
+                sx: { fontWeight: 500 }
+              }}
+              inputProps={{
+                step: 60 // Hanya tampilkan jam dan menit (hilangkan detik)
+              }}
+              helperText="Format: HH:mm (contoh: 14:30)"
+              sx={{
+                flex: 1,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '12px',
+                  '&:hover fieldset': {
+                    borderColor: '#2e7d32',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#2e7d32',
+                    borderWidth: '2px',
+                  }
+                }
+              }}
+            />
+          </Box>
           
           <TextField
             label="Jumlah"

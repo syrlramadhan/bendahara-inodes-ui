@@ -199,6 +199,8 @@ export default function LaporanKeuangan() {
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [anchorEl, setAnchorEl] = useState(null)
@@ -211,14 +213,22 @@ export default function LaporanKeuangan() {
   }, [refreshKey])
 
   useEffect(() => {
-    // Filter data berdasarkan pencarian
-    const filtered = data.filter(item => 
-      item.keterangan?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.kategori?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.tanggal?.includes(searchQuery)
-    )
-    setFilteredData(filtered)
-  }, [searchQuery, data])
+    // Filter data berdasarkan pencarian dan tanggal
+    const filtered = data.filter(item => {
+      const matchesSearch = item.keterangan?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.kategori?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.tanggal?.includes(searchQuery);
+
+      const itemDate = new Date(item.tanggal);
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+
+      const matchesDateRange = (!start || itemDate >= start) && (!end || itemDate <= end);
+
+      return matchesSearch && matchesDateRange;
+    });
+    setFilteredData(filtered);
+  }, [searchQuery, data, startDate, endDate]);
 
   const fetchData = async () => {
     try {
@@ -431,12 +441,48 @@ export default function LaporanKeuangan() {
               flexDirection: { xs: 'column', sm: 'row' }
             }}>
               <TextField
+                type="date"
+                label="Tanggal Awal"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                variant="outlined"
+                size="small"
+                sx={{
+                  minWidth: { xs: '100%', sm: '160px' },
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '12px',
+                    bgcolor: 'background.paper'
+                  }
+                }}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+              />
+              <TextField
+                type="date"
+                label="Tanggal Akhir"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                variant="outlined"
+                size="small"
+                sx={{
+                  minWidth: { xs: '100%', sm: '160px' },
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '12px',
+                    bgcolor: 'background.paper'
+                  }
+                }}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+              />
+              <TextField
                 placeholder="Cari transaksi..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 variant="outlined"
                 size="small"
-                sx={{ 
+                sx={{
                   minWidth: { xs: '100%', sm: '250px' },
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',

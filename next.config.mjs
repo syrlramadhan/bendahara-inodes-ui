@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-const NGROK_URL = 'http://192.168.1.85:8087';
+const NGROK_URL = 'https://bendahara-inodes-api-production.up.railway.app';
 
 const nextConfig = {
   images: {
