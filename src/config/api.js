@@ -1,4 +1,4 @@
-export const NGROK_URL = 'https://bendahara-inodes-api-production.up.railway.app';
+export const NGROK_URL = 'https://joyful-analysis-production.up.railway.app';
 export const API_BASE_URL = `${NGROK_URL}/api`;
 export const UPLOAD_URL = `${API_BASE_URL}/uploads/`;
 
@@ -10,7 +10,7 @@ export const API_ENDPOINTS = {
     ADMIN_BY_NIK: (nik) => `${API_BASE_URL}/admin/${nik}`,
     
     // Pemasukan endpoints
-    PEMASUKAN_ADD: `${API_BASE_URL}z`,
+    PEMASUKAN_ADD: `${API_BASE_URL}/pemasukan/add`,
     PEMASUKAN_UPDATE: (id) => `${API_BASE_URL}/pemasukan/update/${id}`,
     PEMASUKAN_GET_ALL: `${API_BASE_URL}/pemasukan/getall`,
     PEMASUKAN_GET_BY_ID: (id) => `${API_BASE_URL}/pemasukan/get/${id}`,

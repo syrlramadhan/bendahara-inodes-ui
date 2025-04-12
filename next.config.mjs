@@ -1,12 +1,12 @@
 /** @type {import('next').NextConfig} */
-const NGROK_URL = 'https://bendahara-inodes-api-production.up.railway.app';
+const NGROK_URL = 'https://joyful-analysis-production.up.railway.app';
 
 const nextConfig = {
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: NGROK_URL.replace('http://', ''),
+        hostname: NGROK_URL.replace('https://', ''),
         port: '',
         pathname: '/**',
       },

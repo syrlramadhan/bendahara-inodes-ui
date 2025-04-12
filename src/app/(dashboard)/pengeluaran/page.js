@@ -34,7 +34,7 @@ import MoneyOffIcon from '@mui/icons-material/MoneyOff'
 import ReceiptIcon from '@mui/icons-material/Receipt'
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
 import { styled } from '@mui/material/styles'
-import { laporanService } from '@/services/laporanService'
+import { pengeluaranService } from '@/services/pengeluaranService'
 import { UPLOAD_URL } from '@/config/api'
 
 // Styled components
@@ -125,12 +125,11 @@ export default function Pengeluaran() {
   const fetchData = async () => {
     try {
       setLoading(true)
-      const response = await laporanService.getAllLaporan()
-      const pengeluaranData = response.filter(item => item.pengeluaran > 0)
-      setRows(pengeluaranData)
+      const response = await pengeluaranService.getAllPengeluaran()
+      setRows(response || [])
     } catch (error) {
       console.error('Error fetching data:', error)
-      showAlertMessage('Gagal mengambil data', 'error')
+      showAlertMessage('Gagal mengambil data pengeluaran', 'error')
     } finally {
       setLoading(false)
     }
@@ -144,16 +143,14 @@ export default function Pengeluaran() {
         ...prev,
         [name]: file
       }))
-      // Buat preview URL untuk gambar
+      // Create preview URL for image
       if (file) {
         const url = URL.createObjectURL(file)
         setPreviewUrl(url)
       }
     } else if (name === 'nominal') {
-      console.log('Input nominal value:', value)
-      // Hapus semua karakter non-digit
+      // Remove non-digit characters
       const numericValue = value.replace(/\D/g, '')
-      console.log('Numeric value:', numericValue)
       setFormData(prev => ({
         ...prev,
         [name]: numericValue
@@ -179,15 +176,14 @@ export default function Pengeluaran() {
   }
 
   const handleEdit = (row) => {
-    console.log('Editing row:', row);
-    setEditingId(row.id) // Menggunakan id dari data yang diterima
+    setEditingId(row.id_pengeluaran)
     setFormData({
       tanggal: row.tanggal,
-      nominal: row.pengeluaran.toString(),
+      nominal: row.nominal.toString(),
       keterangan: row.keterangan,
       nota: null
     })
-    // Set preview URL jika ada nota
+    // Set preview URL if nota exists
     if (row.nota) {
       setPreviewUrl(`${UPLOAD_URL}${row.nota}`)
     } else {
@@ -199,23 +195,19 @@ export default function Pengeluaran() {
   const handleDelete = async (id) => {
     if (!id) {
       console.log('Invalid data:', { id });
-      showAlertMessage('Data tidak valid untuk dihapus (No/ID tidak ditemukan)', 'error');
+      showAlertMessage('Data tidak valid untuk dihapus (ID tidak ditemukan)', 'error');
       return;
     }
 
-    // Konfirmasi penghapusan
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus pengeluaran dengan No ${id}?`)) {
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus pengeluaran dengan ID ${id}?`)) {
       return;
     }
 
     try {
       setLoading(true);
-      await laporanService.deleteLaporan(id, 'pengeluaran');
-      
-      // Refresh data setelah menghapus
+      await pengeluaranService.deletePengeluaran(id);
       await fetchData();
-      
-      showAlertMessage(`Pengeluaran dengan No ${id} berhasil dihapus`, 'success');
+      showAlertMessage(`Pengeluaran dengan ID ${id} berhasil dihapus`, 'success');
     } catch (error) {
       console.error('Error deleting data:', error);
       showAlertMessage(`Gagal menghapus pengeluaran: ${error.message}`, 'error');
@@ -232,55 +224,61 @@ export default function Pengeluaran() {
   }
 
   const handleSave = async () => {
-    if (!formData.tanggal || !formData.nominal || !formData.keterangan) {
-      showAlertMessage('Semua field harus diisi', 'error')
-      return
-    }
-
-    // Validasi nota untuk penambahan data baru
-    if (!editingId && !formData.nota) {
-      showAlertMessage('Nota harus diupload', 'error')
-      return
-    }
-
     try {
+      // Validation
+      if (!formData.tanggal) {
+        showAlertMessage('Tanggal harus diisi', 'error');
+        return;
+      }
+
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(formData.tanggal)) {
+        showAlertMessage('Format tanggal tidak valid (YYYY-MM-DD)', 'error');
+        return;
+      }
+
+      if (!formData.nominal || isNaN(formData.nominal) || parseFloat(formData.nominal) <= 0) {
+        showAlertMessage('Nominal harus berupa angka positif', 'error');
+        return;
+      }
+
+      if (!formData.keterangan || formData.keterangan.trim() === '') {
+        showAlertMessage('Keterangan tidak boleh kosong', 'error');
+        return;
+      }
+
+      // Validate receipt for new entries
+      if (!editingId && !formData.nota) {
+        showAlertMessage('Nota harus diupload', 'error');
+        return;
+      }
+
       setLoading(true);
-      const data = {
-        tanggal: formData.tanggal,
-        nominal: formData.nominal,
-        keterangan: formData.keterangan,
-        nota: formData.nota
+
+      // Prepare form data
+      const formDataToSend = new FormData();
+      formDataToSend.append('tanggal', formData.tanggal);
+      formDataToSend.append('nominal', formData.nominal);
+      formDataToSend.append('keterangan', formData.keterangan);
+      if (formData.nota) {
+        formDataToSend.append('nota', formData.nota);
       }
 
       if (editingId) {
-        console.log('Updating data:', { id: editingId, data });
-        // Jika edit dan ada nota baru
-        if (formData.nota) {
-          await laporanService.updateLaporan(editingId, {
-            ...data,
-            jenis: 'pengeluaran'
-          });
-        } else {
-          // Jika edit tanpa mengubah nota
-          const { nota, ...dataWithoutNota } = data;
-          await laporanService.updateLaporan(editingId, {
-            ...dataWithoutNota,
-            jenis: 'pengeluaran'
-          });
-        }
-        showAlertMessage('Data berhasil diperbarui', 'success')
+        await pengeluaranService.updatePengeluaran(editingId, formDataToSend);
+        showAlertMessage('Data pengeluaran berhasil diperbarui', 'success');
       } else {
-        await laporanService.addPengeluaran(data)
-        showAlertMessage('Data berhasil ditambahkan', 'success')
+        await pengeluaranService.addPengeluaran(formDataToSend);
+        showAlertMessage('Data pengeluaran berhasil ditambahkan', 'success');
       }
       
-      setShowModal(false)
-      fetchData()
+      setShowModal(false);
+      fetchData();
     } catch (error) {
-      console.error('Error saving data:', error)
-      showAlertMessage(error.message || 'Gagal menyimpan data', 'error')
+      console.error('Error saving data:', error);
+      showAlertMessage(error.message || 'Gagal menyimpan data pengeluaran', 'error');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -293,7 +291,7 @@ export default function Pengeluaran() {
     }).format(amount)
   }
 
-  const totalPengeluaran = rows.reduce((sum, row) => sum + (row.pengeluaran || 0), 0)
+  const totalPengeluaran = rows.reduce((sum, row) => sum + (row.nominal || 0), 0)
 
   const handleClose = () => {
     setShowModal(false)
@@ -383,7 +381,7 @@ export default function Pengeluaran() {
                 ) : (
                   rows.map((row, index) => (
                     <TableRow 
-                      key={`${row.tanggal}-${index}`} 
+                      key={row.id_pengeluaran} 
                       sx={{ 
                         '&:hover': { 
                           bgcolor: '#f8f9fa',
@@ -400,7 +398,7 @@ export default function Pengeluaran() {
                         fontWeight: 600,
                         whiteSpace: 'nowrap'
                       }}>
-                        {formatCurrency(row.pengeluaran)}
+                        {formatCurrency(row.nominal)}
                       </TableCell>
                       <TableCell sx={{ 
                         maxWidth: { xs: '120px', sm: '200px' },
@@ -456,7 +454,7 @@ export default function Pengeluaran() {
                           <Tooltip title="Hapus">
                             <IconButton 
                               size="small" 
-                              onClick={() => handleDelete(row.id)}
+                              onClick={() => handleDelete(row.id_pengeluaran)}
                               sx={{ 
                                 color: '#d32f2f',
                                 width: { xs: '35px', sm: '30px' },
@@ -776,4 +774,4 @@ export default function Pengeluaran() {
       </Dialog>
     </Box>
   )
-} 
+}

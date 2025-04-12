@@ -10,11 +10,12 @@ import SearchHistory from '@/components/dashboard/search-history'
 import { colors } from '@/styles/colors'
 import { useState, useEffect } from 'react'
 import { laporanService } from '@/services/laporanService'
+import { transaksiService } from '@/services/transaksiService'
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
 
 const theme = createTheme({
   typography: {
-    fontFamily: '"Poppins", sans-serif', 
+    fontFamily: '"Poppins", sans-serif',
   },
 })
 
@@ -72,8 +73,8 @@ const HistoryCard = styled(Card)`
 
 export default function Dashboard() {
   const [openBiodata, setOpenBiodata] = useState(false)
-  const [laporan, setLaporan] = useState([])
-  const [filteredLaporan, setFilteredLaporan] = useState([])
+  const [transactions, setTransactions] = useState([])
+  const [filteredTransactions, setFilteredTransactions] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [totalSaldo, setTotalSaldo] = useState(0)
   const [totalPemasukan, setTotalPemasukan] = useState(0)
@@ -86,28 +87,29 @@ export default function Dashboard() {
       try {
         setLoading(true)
         setError(null)
-        const data = await laporanService.getAllLaporan()
-        
-        if (Array.isArray(data)) {
-          setLaporan(data)
-          setFilteredLaporan(data)
-          
-          let saldo = 0
-          let pemasukan = 0
-          let pengeluaran = 0
-          
-          data.forEach(item => {
-            if (item.total_saldo) saldo = item.total_saldo
-            if (item.pemasukan) pemasukan += item.pemasukan
-            if (item.pengeluaran) pengeluaran += item.pengeluaran
-          })
-          
-          setTotalSaldo(saldo)
+
+        // Fetch financial reports data
+        const laporanData = await laporanService.getAllLaporan()
+        if (laporanData && laporanData.length > 0) {
+          const lastReport = laporanData[0]
+          setTotalSaldo(lastReport.total_saldo || 0)
+
+          // Calculate totals from reports
+          const pemasukan = laporanData.reduce((sum, item) => sum + (item.pemasukan || 0), 0)
+          const pengeluaran = laporanData.reduce((sum, item) => sum + (item.pengeluaran || 0), 0)
+
           setTotalPemasukan(pemasukan)
           setTotalPengeluaran(pengeluaran)
+        }
+
+        // Fetch transaction history
+        const transaksiData = await transaksiService.getAllTransaksi()
+        if (Array.isArray(transaksiData)) {
+          setTransactions(transaksiData)
+          setFilteredTransactions(transaksiData)
         } else {
-          console.error('Data is not an array:', data)
-          setError('Format data tidak valid')
+          console.error('Transaction data is not an array:', transaksiData)
+          setError('Format data transaksi tidak valid')
         }
       } catch (error) {
         console.error('Error fetching data:', error)
@@ -121,14 +123,14 @@ export default function Dashboard() {
   }, [])
 
   useEffect(() => {
-    // Filter data berdasarkan pencarian
-    const filtered = laporan.filter(item => 
+    // Filter transaction data based on search query
+    const filtered = transactions.filter(item =>
       item.keterangan?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.kategori?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.jenis_transaksi || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.tanggal?.includes(searchQuery)
     )
-    setFilteredLaporan(filtered)
-  }, [searchQuery, laporan])
+    setFilteredTransactions(filtered)
+  }, [searchQuery, transactions])
 
   const handleSearch = (value) => {
     setSearchQuery(value)
@@ -154,91 +156,97 @@ export default function Dashboard() {
   return (
     <ThemeProvider theme={theme}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, padding: { xs: '16px', sm: '24px', md: '32px' } }}>
-        {/* Welcome Card */}
-        <StyledCard variant="blue">
-          <ContentWrapper>
-            <Box>
-              <Typography variant="h3" component="div" sx={{
-                fontWeight: 700,
-                fontSize: { xs: '1.5rem', sm: '2.5rem' },
-                mb: 2
-              }}>
-                Selamat Datang di Sistem Bendahara
-              </Typography>
-              <Typography variant="body1" sx={{
-                fontWeight: 400,
-                opacity: 0.8,
-                mb: 4
-              }}>
-                Kelola keuangan desa dengan lebih mudah dan efisien
-              </Typography>
-              <Typography variant="body2" sx={{ 
-                fontSize: '100%', 
-                opacity: 0.9 
-              }}>
-                Total Kas Desa
-              </Typography>
-              <Typography variant="h4" component="div" sx={{ 
-                fontWeight: 700, 
-                mt: 1 
-              }}>
-                {formatCurrency(totalSaldo)}
-              </Typography>
-            </Box>
-          </ContentWrapper>
-          <IconWrapper>
-            <AccountBalanceWalletIcon sx={{ fontSize: '180px' }} />
-          </IconWrapper>
-        </StyledCard>
-
-        {/* Stats Cards */}
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6} md={4}>
-            <StyledCard variant="blue">
-              <ContentWrapper>
-                <Typography variant="subtitle1" sx={{ opacity: 0.8, mb: 1 }}>
-                  Total Kas
+        {/* Welcome Card + Stats Cards Container */}
+        <Box sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 3
+        }}>
+          {/* Welcome Card (Total Kas Desa) */}
+          <StyledCard variant="blue">
+            <ContentWrapper>
+              <Box>
+                <Typography variant="h3" component="div" sx={{
+                  fontWeight: 700,
+                  fontSize: { xs: '1.5rem', sm: '2.5rem' },
+                  mb: 2
+                }}>
+                  Selamat Datang di Sistem Bendahara
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                <Typography variant="body1" sx={{
+                  fontWeight: 400,
+                  opacity: 0.8,
+                  mb: 4
+                }}>
+                  Kelola keuangan desa dengan lebih mudah dan efisien
+                </Typography>
+                <Typography variant="body2" sx={{
+                  fontSize: '100%',
+                  opacity: 0.9
+                }}>
+                  Total Kas Desa
+                </Typography>
+                <Typography variant="h4" component="div" sx={{
+                  fontWeight: 700,
+                  mt: 1
+                }}>
                   {formatCurrency(totalSaldo)}
                 </Typography>
-              </ContentWrapper>
-              <IconWrapper>
-                <AccountBalanceWalletIcon sx={{ fontSize: '120px' }} />
-              </IconWrapper>
-            </StyledCard>
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <StyledCard variant="green">
-              <ContentWrapper>
-                <Typography variant="subtitle1" sx={{ opacity: 0.8, mb: 1 }}>
-                  Total Pemasukan
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                  {formatCurrency(totalPemasukan)}
-                </Typography>
-              </ContentWrapper>
-              <IconWrapper>
-                <TrendingUpIcon sx={{ fontSize: '120px' }} />
-              </IconWrapper>
-            </StyledCard>
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <StyledCard variant="red">
-              <ContentWrapper>
-                <Typography variant="subtitle1" sx={{ opacity: 0.8, mb: 1 }}>
-                  Total Pengeluaran
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                  {formatCurrency(totalPengeluaran)}
-                </Typography>
-              </ContentWrapper>
-              <IconWrapper>
-                <TrendingDownIcon sx={{ fontSize: '120px' }} />
-              </IconWrapper>
-            </StyledCard>
-          </Grid>
-        </Grid>
+              </Box>
+            </ContentWrapper>
+            <IconWrapper>
+              <AccountBalanceWalletIcon sx={{ fontSize: '180px' }} />
+            </IconWrapper>
+          </StyledCard>
+
+          {/* Stats Cards - Rata Kiri Kanan */}
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: 3,
+            flexWrap: 'wrap'
+          }}>
+            {/* Total Pemasukan - Rata Kiri */}
+            <Box sx={{
+              flex: 1,
+              minWidth: { xs: '100%', sm: '48%', md: '48%' }
+            }}>
+              <StyledCard variant="green">
+                <ContentWrapper>
+                  <Typography variant="subtitle1" sx={{ opacity: 0.8, mb: 1 }}>
+                    Total Pemasukan
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                    {formatCurrency(totalPemasukan)}
+                  </Typography>
+                </ContentWrapper>
+                <IconWrapper>
+                  <TrendingUpIcon sx={{ fontSize: '120px' }} />
+                </IconWrapper>
+              </StyledCard>
+            </Box>
+
+            {/* Total Pengeluaran - Rata Kanan */}
+            <Box sx={{
+              flex: 1,
+              minWidth: { xs: '100%', sm: '48%', md: '48%' }
+            }}>
+              <StyledCard variant="red">
+                <ContentWrapper>
+                  <Typography variant="subtitle1" sx={{ opacity: 0.8, mb: 1 }}>
+                    Total Pengeluaran
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                    {formatCurrency(totalPengeluaran)}
+                  </Typography>
+                </ContentWrapper>
+                <IconWrapper>
+                  <TrendingDownIcon sx={{ fontSize: '120px' }} />
+                </IconWrapper>
+              </StyledCard>
+            </Box>
+          </Box>
+        </Box>
 
         {/* History Section */}
         <HistoryCard>
@@ -249,8 +257,8 @@ export default function Dashboard() {
               </Typography>
             }
             action={
-              <SearchHistory 
-                placeholder="Cari transaksi..." 
+              <SearchHistory
+                placeholder="Cari transaksi..."
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
               />
@@ -275,7 +283,7 @@ export default function Dashboard() {
                         <CircularProgress />
                       </td>
                     </tr>
-                  ) : filteredLaporan.length === 0 ? (
+                  ) : filteredTransactions.length === 0 ? (
                     <tr>
                       <td colSpan={4} style={{ textAlign: 'center', padding: '32px' }}>
                         <AccountBalanceIcon style={{ fontSize: 48, color: '#ccc', marginBottom: 16 }} />
@@ -285,8 +293,8 @@ export default function Dashboard() {
                       </td>
                     </tr>
                   ) : (
-                    filteredLaporan.map((item, index) => (
-                      <tr key={index} style={{ 
+                    filteredTransactions.map((item, index) => (
+                      <tr key={index} style={{
                         borderBottom: '1px solid #eee',
                         backgroundColor: index % 2 === 0 ? '#fff' : '#fafafa'
                       }}>
@@ -299,23 +307,23 @@ export default function Dashboard() {
                               px: 2,
                               py: 0.5,
                               borderRadius: '12px',
-                              bgcolor: item.pemasukan > 0 ? '#e8f5e9' : '#ffebee',
-                              color: item.pemasukan > 0 ? '#2e7d32' : '#d32f2f',
+                              bgcolor: item.jenis_transaksi === 'Pemasukan' ? '#e8f5e9' : '#ffebee',
+                              color: item.jenis_transaksi === 'Pemasukan' ? '#2e7d32' : '#d32f2f',
                               fontWeight: 500
                             }}
                           >
-                            {item.pemasukan > 0 ? 'Pemasukan' : 'Pengeluaran'}
+                            {item.jenis_transaksi === 'Pemasukan' ? 'Pemasukan' : 'Pengeluaran'}
                           </Box>
                         </td>
-                        <td style={{ 
-                          padding: '16px', 
+                        <td style={{
+                          padding: '16px',
                           textAlign: 'right',
-                          color: item.pemasukan > 0 ? '#2e7d32' : '#d32f2f',
+                          color: item.jenis_transaksi === 'Pemasukan' ? '#2e7d32' : '#d32f2f',
                           fontWeight: 600
                         }}>
-                          {item.pemasukan > 0 
-                            ? `+ ${formatCurrency(item.pemasukan)}`
-                            : `- ${formatCurrency(item.pengeluaran)}`
+                          {item.jenis_transaksi === 'Pemasukan'
+                            ? `+ ${formatCurrency(item.nominal)}`
+                            : `- ${formatCurrency(item.nominal)}`
                           }
                         </td>
                       </tr>

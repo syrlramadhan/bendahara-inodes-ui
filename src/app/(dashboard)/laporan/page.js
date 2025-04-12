@@ -43,16 +43,11 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import { laporanService } from '@/services/laporanService'
+import { pemasukanService } from '@/services/pemasukanService'
+import { pengeluaranService } from '@/services/pengeluaranService'
+import { transaksiService } from '@/services/transaksiService'
 
-// Data dummy untuk contoh
-const dummyData = [
-  { tanggal: '2024-01-01', keterangan: 'Pemasukan Dana Desa', debit: 50000000, kredit: 0, saldo: 50000000 },
-  { tanggal: '2024-01-05', keterangan: 'Pembayaran ATK', debit: 0, kredit: 500000, saldo: 49500000 },
-  { tanggal: '2024-01-10', keterangan: 'Pembangunan Jalan', debit: 0, kredit: 25000000, saldo: 24500000 },
-  { tanggal: '2024-01-15', keterangan: 'Dana Bantuan', debit: 30000000, kredit: 0, saldo: 54500000 },
-]
-
-// Animasi keyframes
+// Animations and styled components remain the same as your original code
 const slideUp = keyframes`
   from {
     transform: translateY(50px);
@@ -82,7 +77,6 @@ const shimmer = keyframes`
   }
 `;
 
-// Styled Components
 const AnimatedContainer = styled(Container)`
   animation: ${fadeIn} 0.5s ease-out;
 `;
@@ -199,8 +193,6 @@ export default function LaporanKeuangan() {
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [anchorEl, setAnchorEl] = useState(null)
@@ -213,30 +205,29 @@ export default function LaporanKeuangan() {
   }, [refreshKey])
 
   useEffect(() => {
-    // Filter data berdasarkan pencarian dan tanggal
-    const filtered = data.filter(item => {
-      const matchesSearch = item.keterangan?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.kategori?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.tanggal?.includes(searchQuery);
-
-      const itemDate = new Date(item.tanggal);
-      const start = startDate ? new Date(startDate) : null;
-      const end = endDate ? new Date(endDate) : null;
-
-      const matchesDateRange = (!start || itemDate >= start) && (!end || itemDate <= end);
-
-      return matchesSearch && matchesDateRange;
-    });
-    setFilteredData(filtered);
-  }, [searchQuery, data, startDate, endDate]);
+    const filtered = data.filter(item => 
+      item.keterangan?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      // item.kategori?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.tanggal?.includes(searchQuery)
+    )
+    setFilteredData(filtered)
+  }, [searchQuery, data])
 
   const fetchData = async () => {
     try {
       setLoading(true)
       setError(null)
-      const response = await laporanService.getAllLaporan()
-      console.log('Fetched data:', response)
-      setData(response || [])
+      
+      // Get all reports data
+      const laporanData = await laporanService.getAllLaporan()
+      console.log('Laporan data:', laporanData)
+      
+      // Get transaction history
+      const transaksiData = await transaksiService.getAllTransaksi()
+      console.log('Transaction data:', transaksiData)
+      
+      // Combine data if needed or use whichever is appropriate
+      setData(laporanData || [])
     } catch (error) {
       console.error('Error fetching data:', error)
       setError('Gagal mengambil data laporan: ' + error.message)
@@ -253,7 +244,6 @@ export default function LaporanKeuangan() {
     setAnchorEl(null)
   }
 
-  // Format angka ke format rupiah
   const formatRupiah = (number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -263,24 +253,20 @@ export default function LaporanKeuangan() {
     }).format(number)
   }
 
-  // Fungsi untuk generate PDF
   const generatePDF = () => {
     try {
-      const doc = new jsPDF('l', 'mm', 'a4') // Landscape orientation
+      const doc = new jsPDF('l', 'mm', 'a4')
       
-      // Judul
       doc.setFontSize(16)
       doc.text('Laporan Keuangan Desa', 14, 15)
       doc.setFontSize(12)
       doc.text('Periode: Januari 2024', 14, 25)
 
-      // Ringkasan
       doc.setFontSize(12)
       doc.text(`Total Pemasukan: ${formatRupiah(totalPemasukan)}`, 14, 35)
       doc.text(`Total Pengeluaran: ${formatRupiah(totalPengeluaran)}`, 14, 42)
       doc.text(`Saldo Akhir: ${formatRupiah(saldoAkhir)}`, 14, 49)
       
-      // Tabel
       const tableData = data.map(row => [
         row.tanggal,
         row.keterangan,
@@ -300,11 +286,11 @@ export default function LaporanKeuangan() {
           cellPadding: 2
         },
         columnStyles: {
-          0: { cellWidth: 25 },
-          1: { cellWidth: 60 },
-          2: { cellWidth: 40, halign: 'right' },
-          3: { cellWidth: 40, halign: 'right' },
-          4: { cellWidth: 40, halign: 'right' }
+          0: { cellWidth: 25},
+          1: { cellWidth: 40},
+          2: { cellWidth: 40},
+          3: { cellWidth: 40},
+          4: { cellWidth: 40}
         },
         headStyles: { 
           fillColor: [63, 81, 181],
@@ -318,11 +304,14 @@ export default function LaporanKeuangan() {
       handleClose()
     } catch (error) {
       console.error('Error generating PDF:', error)
-      alert('Terjadi kesalahan saat membuat PDF. Silakan coba lagi.')
+      setAlert({
+        open: true,
+        message: 'Terjadi kesalahan saat membuat PDF',
+        severity: 'error'
+      })
     }
   }
 
-  // Fungsi untuk export Excel
   const exportToExcel = () => {
     const ws = XLSX.utils.json_to_sheet(data.map(row => ({
       Tanggal: row.tanggal,
@@ -332,13 +321,12 @@ export default function LaporanKeuangan() {
       Saldo: row.total_saldo
     })))
     
-    // Set lebar kolom
     const colWidths = [
-      { wch: 12 }, // Tanggal
-      { wch: 30 }, // Keterangan
-      { wch: 15 }, // Pemasukan
-      { wch: 15 }, // Pengeluaran
-      { wch: 15 }  // Saldo
+      { wch: 12 },
+      { wch: 30 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 15 }
     ]
     ws['!cols'] = colWidths
     
@@ -348,58 +336,61 @@ export default function LaporanKeuangan() {
     handleClose()
   }
 
-  // Fungsi untuk refresh data
   const refreshData = () => {
     setRefreshKey(oldKey => oldKey + 1)
   }
 
-  // Update calculations
-  const totalPemasukan = data.reduce((sum, item) => sum + (item.pemasukan || 0), 0)
-  const totalPengeluaran = data.reduce((sum, item) => sum + (item.pengeluaran || 0), 0)
-  const saldoAkhir = data.length > 0 ? data[0].total_saldo : 0
-
   const handleDelete = async (id, jenis) => {
-    console.log('Attempting to delete:', { id, jenis });
-    
     if (!id || !jenis) {
-      console.log('Invalid data:', { id, jenis });
       setAlert({
         open: true,
-        message: 'Data tidak valid untuk dihapus (No/ID tidak ditemukan)',
+        message: 'Data tidak valid untuk dihapus',
         severity: 'error'
-      });
-      return;
+      })
+      return
     }
 
-    // Konfirmasi penghapusan
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus ${jenis} dengan No ${id}?`)) {
-      return;
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus ${jenis} ini?`)) {
+      return
     }
 
     try {
-      setLoading(true);
-      await laporanService.deleteLaporan(id, jenis);
+      setLoading(true)
       
-      // Refresh data setelah menghapus
-      const updatedData = await laporanService.getAllLaporan();
-      setData(updatedData);
+      // Call the appropriate service based on transaction type
+      if (jenis === 'pemasukan') {
+        await pemasukanService.deletePemasukan(id)
+      } else if (jenis === 'pengeluaran') {
+        await pengeluaranService.deletePengeluaran(id)
+      } else {
+        throw new Error('Jenis transaksi tidak valid')
+      }
+      
+      // Refresh the data
+      const updatedData = await laporanService.getAllLaporan()
+      setData(updatedData)
       
       setAlert({
         open: true,
-        message: `${jenis} dengan No ${id} berhasil dihapus`,
+        message: 'Data berhasil dihapus',
         severity: 'success'
-      });
+      })
     } catch (error) {
-      console.error('Error deleting data:', error);
+      console.error('Error deleting data:', error)
       setAlert({
         open: true,
-        message: `Gagal menghapus ${jenis}: ${error.message}`,
+        message: `Gagal menghapus data: ${error.message}`,
         severity: 'error'
-      });
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
+
+  // Calculate totals
+  const totalPemasukan = data.reduce((sum, item) => sum + (item.pemasukan || 0), 0)
+  const totalPengeluaran = data.reduce((sum, item) => sum + (item.pengeluaran || 0), 0)
+  const saldoAkhir = data.length > 0 ? data[0].total_saldo : 0
 
   return (
     <AnimatedContainer maxWidth="lg" sx={{ 
@@ -419,6 +410,7 @@ export default function LaporanKeuangan() {
         </Box>
       ) : (
         <div>
+          {/* Header Section */}
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} sx={{
             flexDirection: { xs: 'column', sm: 'row' },
             gap: { xs: 2, sm: 0 }
@@ -441,48 +433,12 @@ export default function LaporanKeuangan() {
               flexDirection: { xs: 'column', sm: 'row' }
             }}>
               <TextField
-                type="date"
-                label="Tanggal Awal"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                variant="outlined"
-                size="small"
-                sx={{
-                  minWidth: { xs: '100%', sm: '160px' },
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
-                    bgcolor: 'background.paper'
-                  }
-                }}
-                InputLabelProps={{
-                  shrink: true,
-                }}
-              />
-              <TextField
-                type="date"
-                label="Tanggal Akhir"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                variant="outlined"
-                size="small"
-                sx={{
-                  minWidth: { xs: '100%', sm: '160px' },
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
-                    bgcolor: 'background.paper'
-                  }
-                }}
-                InputLabelProps={{
-                  shrink: true,
-                }}
-              />
-              <TextField
                 placeholder="Cari transaksi..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 variant="outlined"
                 size="small"
-                sx={{
+                sx={{ 
                   minWidth: { xs: '100%', sm: '250px' },
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',
@@ -522,6 +478,7 @@ export default function LaporanKeuangan() {
             </Box>
           </Box>
 
+          {/* Summary Cards */}
           <Grid container spacing={3} mb={4}>
             <Grid item xs={12} sm={4}>
               <StyledCard variant="income" delay={0.2} sx={{
@@ -606,6 +563,7 @@ export default function LaporanKeuangan() {
             </Grid>
           </Grid>
 
+          {/* Export Menu */}
           <Menu
             anchorEl={anchorEl}
             open={open}
@@ -648,11 +606,9 @@ export default function LaporanKeuangan() {
                   <TableHead>
                     <TableRow>
                       <TableCell>Tanggal</TableCell>
-                      <TableCell>Kategori</TableCell>
                       <TableCell>Keterangan</TableCell>
                       <TableCell align="right">Nominal</TableCell>
                       <TableCell align="right">Saldo</TableCell>
-                      <TableCell align="center">Aksi</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -685,7 +641,6 @@ export default function LaporanKeuangan() {
                           }}
                         >
                           <TableCell>{row.tanggal}</TableCell>
-                          <TableCell>{row.kategori}</TableCell>
                           <TableCell sx={{ 
                             maxWidth: { md: '300px' },
                             overflow: 'hidden',
@@ -711,7 +666,7 @@ export default function LaporanKeuangan() {
                           }}>
                             {formatRupiah(row.total_saldo)}
                           </TableCell>
-                          <TableCell align="center">
+                          {/* <TableCell align="center">
                             <Box 
                               className="action-buttons"
                               sx={{ 
@@ -723,22 +678,10 @@ export default function LaporanKeuangan() {
                               }}
                             >
                               <IconButton
-                                onClick={() => {
-                                  const jenisTransaksi = row.pemasukan > 0 ? 'pemasukan' : 'pengeluaran';
-                                  const rowData = {
-                                    id: row.id,
-                                    jenis: jenisTransaksi
-                                  };
-                                  if (!rowData.id || !rowData.jenis) {
-                                    setAlert({
-                                      open: true,
-                                      message: `Data tidak valid untuk dihapus (ID: ${rowData.id}, Jenis: ${rowData.jenis})`,
-                                      severity: 'error'
-                                    });
-                                    return;
-                                  }
-                                  handleDelete(rowData.id, rowData.jenis);
-                                }}
+                                onClick={() => handleDelete(
+                                  row.id_pemasukan || row.id_pengeluaran,
+                                  row.pemasukan > 0 ? 'pemasukan' : 'pengeluaran'
+                                )}
                                 color="error"
                                 sx={{ 
                                   width: { xs: '35px', md: '30px' },
@@ -748,7 +691,7 @@ export default function LaporanKeuangan() {
                                 <DeleteIcon />
                               </IconButton>
                             </Box>
-                          </TableCell>
+                          </TableCell> */}
                         </TableRow>
                       ))
                     )}
@@ -777,15 +720,6 @@ export default function LaporanKeuangan() {
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
                       {row.tanggal}
-                    </Typography>
-                  </Box>
-
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="caption" color="textSecondary">
-                      Kategori
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {row.kategori}
                     </Typography>
                   </Box>
 
@@ -834,22 +768,10 @@ export default function LaporanKeuangan() {
                     mt: 2
                   }}>
                     <IconButton
-                      onClick={() => {
-                        const jenisTransaksi = row.pemasukan > 0 ? 'pemasukan' : 'pengeluaran';
-                        const rowData = {
-                          id: row.id,
-                          jenis: jenisTransaksi
-                        };
-                        if (!rowData.id || !rowData.jenis) {
-                          setAlert({
-                            open: true,
-                            message: `Data tidak valid untuk dihapus (ID: ${rowData.id}, Jenis: ${rowData.jenis})`,
-                            severity: 'error'
-                          });
-                          return;
-                        }
-                        handleDelete(rowData.id, rowData.jenis);
-                      }}
+                      onClick={() => handleDelete(
+                        row.id_pemasukan || row.id_pengeluaran,
+                        row.pemasukan > 0 ? 'pemasukan' : 'pengeluaran'
+                      )}
                       color="error"
                       sx={{
                         width: '40px',
@@ -883,7 +805,7 @@ export default function LaporanKeuangan() {
             )}
           </Box>
 
-          {/* Info Message for Mobile */}
+          {/* Mobile Info Message */}
           <Box sx={{ 
             display: { xs: 'block', md: 'none' }, 
             mt: 2,

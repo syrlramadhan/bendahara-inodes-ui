@@ -32,7 +32,7 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
 import { styled } from '@mui/material/styles'
-import { laporanService } from '@/services/laporanService'
+import { pemasukanService } from '@/services/pemasukanService'
 import SaveIcon from '@mui/icons-material/Save'
 
 // Styled components
@@ -108,8 +108,7 @@ export default function Pemasukan() {
     tanggal: '',
     nominal: '',
     keterangan: '',
-    kategori: '',
-    waktu: ''
+    kategori: ''
   })
   const [showAlert, setShowAlert] = useState(false)
   const [alertMessage, setAlertMessage] = useState('')
@@ -123,12 +122,11 @@ export default function Pemasukan() {
   const fetchData = async () => {
     try {
       setLoading(true)
-      const response = await laporanService.getAllLaporan()
-      const pemasukanData = response.filter(item => item.pemasukan > 0)
-      setRows(pemasukanData)
+      const response = await pemasukanService.getAllPemasukan()
+      setRows(response || [])
     } catch (error) {
       console.error('Error fetching data:', error)
-      showAlertMessage('Gagal mengambil data', 'error')
+      showAlertMessage('Gagal mengambil data pemasukan', 'error')
     } finally {
       setLoading(false)
     }
@@ -138,76 +136,22 @@ export default function Pemasukan() {
     const { name, value } = e.target;
     
     if (name === 'nominal') {
-      // Hapus semua karakter non-digit
+      // Remove non-digit characters
       const numericValue = value.replace(/\D/g, '');
       
-      // Batasi maksimal 11 digit (puluhan milyar)
+      // Limit to 11 digits (tens of billions)
       if (numericValue.length > 11) {
         showAlertMessage('Nominal terlalu besar (maksimal puluhan milyar)', 'error');
         return;
       }
 
-      // Format dengan separator ribuan
-      const formattedValue = numericValue === '' ? '' : parseInt(numericValue).toLocaleString('id-ID');
-      
       setFormData(prev => ({
         ...prev,
-        [name]: numericValue // Simpan nilai numerik tanpa format
+        [name]: numericValue
       }));
-    } else if (name === 'tanggal') {
-      try {
-        // Jika input kosong, izinkan
-        if (!value) {
-          setFormData(prev => ({
-            ...prev,
-            [name]: ''
-          }));
-          return;
-        }
-
-        // Validasi tanggal
-        const date = new Date(value);
-        if (isNaN(date.getTime())) {
-          showAlertMessage('Tanggal tidak valid', 'error');
-          return;
-        }
-
-        setFormData(prev => ({
-          ...prev,
-          [name]: value
-        }));
-      } catch (error) {
-        console.error('Error formatting date:', error);
-        showAlertMessage('Format tanggal tidak valid', 'error');
-      }
-    } else if (name === 'waktu') {
-      try {
-        // Format waktu ke HH:mm
-        let formattedTime = value;
-        const timeParts = value.split(':');
-        
-        if (timeParts.length > 0) {
-          const hours = timeParts[0].padStart(2, '0');
-          const minutes = (timeParts[1] || '00').padStart(2, '0');
-          formattedTime = `${hours}:${minutes}`;
-        }
-
-        // Validasi format waktu
-        const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
-        if (!timeRegex.test(formattedTime)) {
-          return; // Jangan update jika format tidak valid
-        }
-
-        setFormData(prev => ({
-          ...prev,
-          [name]: formattedTime
-        }));
-      } catch (error) {
-        console.error('Error formatting time:', error);
-      }
     } else {
       setFormData(prev => ({
-                ...prev,
+        ...prev,
         [name]: value
       }));
     }
@@ -215,35 +159,22 @@ export default function Pemasukan() {
 
   const handleAdd = () => {
     setEditingId(null)
-    // Set default waktu ke waktu sekarang
-    const now = new Date();
-    const hours = now.getHours().toString().padStart(2, '0');
-    const minutes = now.getMinutes().toString().padStart(2, '0');
-    
     setFormData({
       tanggal: '',
       nominal: '',
       keterangan: '',
-      kategori: '',
-      waktu: `${hours}:${minutes}`
+      kategori: ''
     })
     setShowModal(true)
   }
 
   const handleEdit = (row) => {
-    console.log('Editing row:', row);
-    // Konversi format tanggal dari DD-MM-YYYY ke YYYY-MM-DD untuk input
-    const [date, time] = row.tanggal.split(' ');
-    const [day, month, year] = date.split('-');
-    const formattedDate = `${year}-${month}-${day}`;
-    
-    setEditingId(row.id)
+    setEditingId(row.id_pemasukan)
     setFormData({
-      tanggal: formattedDate,
-      nominal: row.pemasukan.toString(),
+      tanggal: row.tanggal,
+      nominal: row.nominal.toString(),
       keterangan: row.keterangan,
-      kategori: row.kategori || '',
-      waktu: time
+      kategori: row.kategori || ''
     })
     setShowModal(true)
   }
@@ -251,23 +182,19 @@ export default function Pemasukan() {
   const handleDelete = async (id) => {
     if (!id) {
       console.log('Invalid data:', { id });
-      showAlertMessage('Data tidak valid untuk dihapus (No/ID tidak ditemukan)', 'error');
+      showAlertMessage('Data tidak valid untuk dihapus (ID tidak ditemukan)', 'error');
       return;
     }
 
-    // Konfirmasi penghapusan
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus pemasukan dengan No ${id}?`)) {
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus pemasukan dengan ID ${id}?`)) {
       return;
     }
 
     try {
       setLoading(true);
-      await laporanService.deleteLaporan(id, 'pemasukan');
-      
-      // Refresh data setelah menghapus
+      await pemasukanService.deletePemasukan(id);
       await fetchData();
-      
-      showAlertMessage(`Pemasukan dengan No ${id} berhasil dihapus`, 'success');
+      showAlertMessage(`Pemasukan dengan ID ${id} berhasil dihapus`, 'success');
     } catch (error) {
       console.error('Error deleting data:', error);
       showAlertMessage(`Gagal menghapus pemasukan: ${error.message}`, 'error');
@@ -285,43 +212,55 @@ export default function Pemasukan() {
 
   const handleSave = async () => {
     try {
-      // Validasi input
-      if (!formData.tanggal || !formData.waktu || !formData.nominal || !formData.kategori || !formData.keterangan) {
-        showAlertMessage('Semua field harus diisi', 'error');
+      // Validation
+      if (!formData.tanggal) {
+        showAlertMessage('Tanggal harus diisi', 'error');
         return;
       }
 
-      // Format tanggal dari YYYY-MM-DD ke DD-MM-YYYY HH:mm
-      const [year, month, day] = formData.tanggal.split('-');
-      const tanggalLengkap = `${day}-${month}-${year} ${formData.waktu}`;
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(formData.tanggal)) {
+        showAlertMessage('Format tanggal tidak valid (YYYY-MM-DD)', 'error');
+        return;
+      }
 
-      const data = {
-        tanggal: tanggalLengkap,
-        kategori: formData.kategori,
-        keterangan: formData.keterangan,
-        nominal: parseInt(formData.nominal)
-      };
+      if (!formData.nominal || isNaN(formData.nominal) || parseFloat(formData.nominal) <= 0) {
+        showAlertMessage('Nominal harus berupa angka positif', 'error');
+        return;
+      }
 
-      console.log('Data yang akan dikirim:', data);
+      if (!formData.kategori || formData.kategori.trim() === '') {
+        showAlertMessage('Kategori tidak boleh kosong', 'error');
+        return;
+      }
+
+      if (!formData.keterangan || formData.keterangan.trim() === '') {
+        showAlertMessage('Keterangan tidak boleh kosong', 'error');
+        return;
+      }
 
       setLoading(true);
 
+      const data = {
+        tanggal: formData.tanggal,
+        nominal: parseFloat(formData.nominal),
+        kategori: formData.kategori.trim(),
+        keterangan: formData.keterangan.trim()
+      };
+
       if (editingId) {
-        await laporanService.updateLaporan(editingId, {
-          ...data,
-          jenis: 'pemasukan'
-        });
-        showAlertMessage('Data berhasil diperbarui', 'success');
+        await pemasukanService.updatePemasukan(editingId, data);
+        showAlertMessage('Data pemasukan berhasil diperbarui', 'success');
       } else {
-        await laporanService.addPemasukan(data);
-        showAlertMessage('Data berhasil ditambahkan', 'success');
+        await pemasukanService.addPemasukan(data);
+        showAlertMessage('Data pemasukan berhasil ditambahkan', 'success');
       }
       
       setShowModal(false);
       fetchData();
     } catch (error) {
       console.error('Error saving data:', error);
-      showAlertMessage(error.message || 'Gagal menyimpan data', 'error');
+      showAlertMessage(error.message || 'Gagal menyimpan data pemasukan', 'error');
     } finally {
       setLoading(false);
     }
@@ -336,7 +275,7 @@ export default function Pemasukan() {
     }).format(amount)
   }
 
-  const totalPemasukan = rows.reduce((sum, row) => sum + (row.pemasukan || 0), 0)
+  const totalPemasukan = rows.reduce((sum, row) => sum + (row.nominal || 0), 0)
 
   return (
     <Box sx={{ 
@@ -396,6 +335,7 @@ export default function Pemasukan() {
                 <TableRow>
                   <TableCell>No</TableCell>
                   <TableCell>Tanggal</TableCell>
+                  <TableCell>Kategori</TableCell>
                   <TableCell>Jumlah</TableCell>
                   <TableCell>Keterangan</TableCell>
                   <TableCell align="center">Aksi</TableCell>
@@ -420,7 +360,7 @@ export default function Pemasukan() {
                 ) : (
                   rows.map((row, index) => (
                     <TableRow 
-                      key={`${row.tanggal}-${index}`} 
+                      key={row.id_pemasukan} 
                       sx={{ 
                         '&:hover': { 
                           bgcolor: '#f8f9fa',
@@ -431,13 +371,14 @@ export default function Pemasukan() {
                       }}
                     >
                       <TableCell>{index + 1}</TableCell>
-                      <TableCell>{row.tanggal.split('T')[0]}</TableCell>
+                      <TableCell>{row.tanggal}</TableCell>
+                      <TableCell>{row.kategori}</TableCell>
                       <TableCell sx={{ 
                         color: '#2e7d32', 
                         fontWeight: 600,
                         whiteSpace: 'nowrap'
                       }}>
-                        {formatCurrency(row.pemasukan)}
+                        {formatCurrency(row.nominal)}
                       </TableCell>
                       <TableCell sx={{ 
                         maxWidth: { xs: '120px', sm: '200px' },
@@ -474,7 +415,7 @@ export default function Pemasukan() {
                           <Tooltip title="Hapus">
                             <IconButton 
                               size="small" 
-                              onClick={() => handleDelete(row.id)}
+                              onClick={() => handleDelete(row.id_pemasukan)}
                               sx={{ 
                                 color: '#d32f2f',
                                 width: { xs: '35px', sm: '30px' },
@@ -571,73 +512,31 @@ export default function Pemasukan() {
             <Divider />
           </Box>
 
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 2,
-            width: '100%'
-          }}>
-            <TextField
-              label="Tanggal"
-              name="tanggal"
-              type="date"
-              value={formData.tanggal}
-              onChange={handleInputChange}
-              fullWidth
-              required
-              InputLabelProps={{ 
-                shrink: true,
-                sx: { fontWeight: 500 }
-              }}
-              inputProps={{
-                max: '9999-12-31'
-              }}
-              helperText="Pilih tanggal"
-              sx={{
-                flex: 2,
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '12px',
-                  '&:hover fieldset': {
-                    borderColor: '#2e7d32',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#2e7d32',
-                    borderWidth: '2px',
-                  }
+          <TextField
+            label="Tanggal"
+            name="tanggal"
+            type="date"
+            value={formData.tanggal}
+            onChange={handleInputChange}
+            fullWidth
+            required
+            InputLabelProps={{ 
+              shrink: true,
+              sx: { fontWeight: 500 }
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '12px',
+                '&:hover fieldset': {
+                  borderColor: '#2e7d32',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#2e7d32',
+                  borderWidth: '2px',
                 }
-              }}
-            />
-
-            <TextField
-              label="Waktu"
-              name="waktu"
-              type="time"
-              value={formData.waktu || ''}
-              onChange={handleInputChange}
-              fullWidth
-              required
-              InputLabelProps={{ 
-                shrink: true,
-                sx: { fontWeight: 500 }
-              }}
-              inputProps={{
-                step: 60 // Hanya tampilkan jam dan menit (hilangkan detik)
-              }}
-              helperText="Format: HH:mm (contoh: 14:30)"
-              sx={{
-                flex: 1,
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '12px',
-                  '&:hover fieldset': {
-                    borderColor: '#2e7d32',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#2e7d32',
-                    borderWidth: '2px',
-                  }
-                }
-              }}
-            />
-          </Box>
+              }
+            }}
+          />
           
           <TextField
             label="Jumlah"
@@ -796,4 +695,4 @@ export default function Pemasukan() {
       </Dialog>
     </Box>
   )
-} 
+}
