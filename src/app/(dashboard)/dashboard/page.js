@@ -103,7 +103,7 @@ export default function Dashboard() {
         }
 
         // Fetch transaction history
-        const transaksiData = await transaksiService.getAllTransaksi()
+        const transaksiData = await transaksiService.getLastTransaksi()
         if (Array.isArray(transaksiData)) {
           setTransactions(transaksiData)
           setFilteredTransactions(transaksiData)
@@ -255,13 +255,6 @@ export default function Dashboard() {
               <Typography variant="h5" sx={{ fontWeight: 600, color: '#1a237e' }}>
                 History Transaksi
               </Typography>
-            }
-            action={
-              <SearchHistory
-                placeholder="Cari transaksi..."
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-              />
             }
             sx={{ borderBottom: '1px solid #eee', p: 3 }}
           />

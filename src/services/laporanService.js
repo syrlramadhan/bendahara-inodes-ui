@@ -148,7 +148,7 @@ export const laporanService = {
             }
 
             const response = await fetch(
-                `/api/laporan/range?start=${encodeURIComponent(startDate)}&end=${encodeURIComponent(endDate)}`, 
+                `/api/laporan/range?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`, 
                 {
                     method: 'GET',
                     headers: {

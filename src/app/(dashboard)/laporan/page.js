@@ -28,7 +28,7 @@ import {
   FormControl,
   InputLabel
 } from '@mui/material'
-import { 
+import {
   FileDownload as FileDownloadIcon,
   Print as PrintIcon,
   PictureAsPdf as PdfIcon,
@@ -47,7 +47,7 @@ import { pemasukanService } from '@/services/pemasukanService'
 import { pengeluaranService } from '@/services/pengeluaranService'
 import { transaksiService } from '@/services/transaksiService'
 
-// Animasi dan styled components tetap sama seperti kode asli
+// Animasi dan styled components
 const slideUp = keyframes`
   from {
     transform: translateY(50px);
@@ -105,20 +105,20 @@ const AnimatedTypography = styled(Typography)`
 
 const StyledCard = styled(Card)(({ theme, variant, delay = 0 }) => ({
   padding: theme.spacing(3),
-  background: theme.palette.mode === 'dark' 
+  background: theme.palette.mode === 'dark'
     ? variant === 'income'
       ? 'linear-gradient(135deg, #2196F3 30%, #64B5F6 100%)'
       : variant === 'expense'
-      ? 'linear-gradient(135deg, #1E88E5 30%, #42A5F5 100%)'
-      : 'linear-gradient(135deg, #1976D2 30%, #2196F3 100%)'
+        ? 'linear-gradient(135deg, #1E88E5 30%, #42A5F5 100%)'
+        : 'linear-gradient(135deg, #1976D2 30%, #2196F3 100%)'
     : variant === 'income'
       ? 'linear-gradient(135deg, #1976D2 0%, #42A5F5 100%)'
       : variant === 'expense'
-      ? 'linear-gradient(135deg, #1565C0 0%, #1976D2 100%)'
-      : 'linear-gradient(135deg, #0D47A1 0%, #1565C0 100%)',
+        ? 'linear-gradient(135deg, #1565C0 0%, #1976D2 100%)'
+        : 'linear-gradient(135deg, #0D47A1 0%, #1565C0 100%)',
   color: '#ffffff',
   borderRadius: '16px',
-  boxShadow: theme.palette.mode === 'dark' 
+  boxShadow: theme.palette.mode === 'dark'
     ? '0 8px 16px rgba(0,0,0,0.4)'
     : '0 8px 16px rgba(0,0,0,0.1)',
   transition: 'all 0.3s ease-in-out',
@@ -211,7 +211,7 @@ const StyledFormControl = styled(FormControl)(({ theme }) => ({
 export default function LaporanKeuangan() {
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
-  const [timeRange, setTimeRange] = useState('all') // State untuk filter rentang waktu
+  const [timeRange, setTimeRange] = useState('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [anchorEl, setAnchorEl] = useState(null)
@@ -219,15 +219,25 @@ export default function LaporanKeuangan() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [alert, setAlert] = useState({ open: false, message: '', severity: 'success' })
 
-  useEffect(() => {
-    fetchData()
-  }, [refreshKey])
+  // Format tanggal ke YYYY-MM-DD
+  const formatDate = (date) => {
+    if (!date) return null
+    const d = new Date(date)
+    // Pastikan tidak ada masalah timezone
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
 
   // Fungsi untuk menghitung rentang tanggal berdasarkan filter
   const getDateRange = (range) => {
     const today = new Date()
+    today.setHours(0, 0, 0, 0) // Set ke awal hari
+
     const startDate = new Date()
-    
+    startDate.setHours(0, 0, 0, 0) // Set ke awal hari
+
     switch (range) {
       case 'today':
         return { start: today, end: today }
@@ -255,41 +265,46 @@ export default function LaporanKeuangan() {
     }
   }
 
-  // Filter data berdasarkan rentang waktu
-  useEffect(() => {
-    const { start, end } = getDateRange(timeRange)
-    
-    if (!start || !end) {
-      setFilteredData(data)
-      return
-    }
-
-    const filtered = data.filter(item => {
-      const itemDate = new Date(item.tanggal)
-      return itemDate >= start && itemDate <= end
-    })
-    setFilteredData(filtered)
-  }, [timeRange, data])
-
-  const fetchData = async () => {
+  // Fungsi untuk mengambil data berdasarkan rentang waktu
+  const fetchDataByRange = async (range) => {
     try {
       setLoading(true)
-      setError(null)
-      
-      const laporanData = await laporanService.getAllLaporan()
-      console.log('Laporan data:', laporanData)
-      
-      const transaksiData = await transaksiService.getAllTransaksi()
-      console.log('Transaction data:', transaksiData)
-      
-      setData(laporanData || [])
+      const { start, end } = getDateRange(range)
+
+      if (!start || !end) {
+        // Jika tidak ada rentang (all time), ambil semua data
+        const allData = await laporanService.getAllLaporan()
+        setData(allData || []) // Pastikan array
+        setFilteredData(allData || []) // Pastikan array
+        return
+      }
+
+      // Format tanggal untuk API
+      const startDate = formatDate(start)
+      const endDate = formatDate(end)
+
+      // Ambil data dari endpoint range
+      const rangeData = await laporanService.getLaporanByDateRange(startDate, endDate)
+      setData(rangeData || []) // Pastikan array
+      setFilteredData(rangeData || []) // Pastikan array
     } catch (error) {
       console.error('Error fetching data:', error)
       setError('Gagal mengambil data laporan: ' + error.message)
+      setFilteredData([]) // Set ke array kosong jika error
     } finally {
       setLoading(false)
     }
   }
+
+  // Efek untuk memuat data awal
+  useEffect(() => {
+    fetchDataByRange(timeRange)
+  }, [refreshKey])
+
+  // Efek untuk memfilter data saat timeRange berubah
+  useEffect(() => {
+    fetchDataByRange(timeRange)
+  }, [timeRange])
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget)
@@ -311,17 +326,20 @@ export default function LaporanKeuangan() {
   const generatePDF = () => {
     try {
       const doc = new jsPDF('l', 'mm', 'a4')
-      
+
       doc.setFontSize(16)
       doc.text('Laporan Keuangan Desa', 14, 15)
       doc.setFontSize(12)
-      doc.text('Periode: Januari 2024', 14, 25)
+
+      // Dapatkan label periode berdasarkan timeRange
+      const periodLabel = timeRangeOptions.find(opt => opt.value === timeRange)?.label || 'Semua'
+      doc.text(`Periode: ${periodLabel}`, 14, 25)
 
       doc.setFontSize(12)
       doc.text(`Total Pemasukan: ${formatRupiah(totalPemasukan)}`, 14, 35)
       doc.text(`Total Pengeluaran: ${formatRupiah(totalPengeluaran)}`, 14, 42)
       doc.text(`Saldo Akhir: ${formatRupiah(saldoAkhir)}`, 14, 49)
-      
+
       const tableData = filteredData.map(row => [
         row.tanggal,
         row.keterangan,
@@ -336,7 +354,7 @@ export default function LaporanKeuangan() {
         head: [tableColumns],
         body: tableData,
         startY: 60,
-        styles: { 
+        styles: {
           fontSize: 10,
           cellPadding: 2
         },
@@ -347,14 +365,14 @@ export default function LaporanKeuangan() {
           3: { cellWidth: 40, halign: 'right' },
           4: { cellWidth: 40, halign: 'right' }
         },
-        headStyles: { 
+        headStyles: {
           fillColor: [63, 81, 181],
           textColor: 255,
           fontSize: 10,
           fontStyle: 'bold'
         }
       })
-      
+
       doc.save('laporan-keuangan.pdf')
       handleClose()
     } catch (error) {
@@ -375,7 +393,7 @@ export default function LaporanKeuangan() {
       Pengeluaran: row.pengeluaran,
       Saldo: row.total_saldo
     })))
-    
+
     const colWidths = [
       { wch: 12 },
       { wch: 30 },
@@ -384,7 +402,7 @@ export default function LaporanKeuangan() {
       { wch: 15 }
     ]
     ws['!cols'] = colWidths
-    
+
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Laporan Keuangan')
     XLSX.writeFile(wb, 'laporan-keuangan.xlsx')
@@ -411,7 +429,7 @@ export default function LaporanKeuangan() {
 
     try {
       setLoading(true)
-      
+
       if (jenis === 'pemasukan') {
         await pemasukanService.deletePemasukan(id)
       } else if (jenis === 'pengeluaran') {
@@ -419,10 +437,10 @@ export default function LaporanKeuangan() {
       } else {
         throw new Error('Jenis transaksi tidak valid')
       }
-      
-      const updatedData = await laporanService.getAllLaporan()
-      setData(updatedData)
-      
+
+      // Refresh data setelah menghapus
+      await fetchDataByRange(timeRange)
+
       setAlert({
         open: true,
         message: 'Data berhasil dihapus',
@@ -440,10 +458,10 @@ export default function LaporanKeuangan() {
     }
   }
 
-  const totalPemasukan = filteredData.reduce((sum, item) => sum + (item.pemasukan || 0), 0)
-  const totalPengeluaran = filteredData.reduce((sum, item) => sum + (item.pengeluaran || 0), 0)
-  const saldoAkhir = filteredData.length > 0 ? filteredData[0].total_saldo : 0
-
+  // Hitung total pemasukan, pengeluaran, dan saldo akhir
+  const totalPemasukan = (filteredData || []).reduce((sum, item) => sum + (item.pemasukan || 0), 0)
+  const totalPengeluaran = (filteredData || []).reduce((sum, item) => sum + (item.pengeluaran || 0), 0)
+  const saldoAkhir = (filteredData && filteredData.length > 0) ? filteredData[filteredData.length - 1].total_saldo : 0
   // Opsi untuk dropdown filter
   const timeRangeOptions = [
     { value: 'today', label: 'Hari Ini' },
@@ -457,8 +475,8 @@ export default function LaporanKeuangan() {
   ]
 
   return (
-    <AnimatedContainer maxWidth="lg" sx={{ 
-      mt: 4, 
+    <AnimatedContainer maxWidth="lg" sx={{
+      mt: 4,
       mb: 4,
       backgroundColor: theme => theme.palette.mode === 'dark' ? '#121212' : 'transparent',
       borderRadius: '16px',
@@ -479,8 +497,8 @@ export default function LaporanKeuangan() {
             flexDirection: { xs: 'column', sm: 'row' },
             gap: { xs: 2, sm: 0 }
           }}>
-            <AnimatedTypography 
-              variant="h4" 
+            <AnimatedTypography
+              variant="h4"
               sx={{
                 fontWeight: 600,
                 color: theme => theme.palette.mode === 'dark' ? '#42A5F5' : '#1976D2',
@@ -490,16 +508,16 @@ export default function LaporanKeuangan() {
             >
               Laporan Keuangan
             </AnimatedTypography>
-            <Box sx={{ 
-              display: 'flex', 
+            <Box sx={{
+              display: 'flex',
               gap: 2,
               width: { xs: '100%', sm: 'auto' },
               flexDirection: { xs: 'column', sm: 'row' }
             }}>
-              <StyledFormControl 
-                variant="outlined" 
-                size="small" 
-                sx={{ 
+              <StyledFormControl
+                variant="outlined"
+                size="large"
+                sx={{
                   minWidth: { xs: '100%', sm: '250px' }
                 }}
               >
@@ -520,7 +538,7 @@ export default function LaporanKeuangan() {
                 variant="outlined"
                 onClick={refreshData}
                 fullWidth={false}
-                sx={{ 
+                sx={{
                   borderRadius: '12px',
                   minWidth: { xs: '100%', sm: '120px' }
                 }}
@@ -532,7 +550,7 @@ export default function LaporanKeuangan() {
                 startIcon={<FileDownloadIcon />}
                 onClick={handleClick}
                 fullWidth={false}
-                sx={{ 
+                sx={{
                   minWidth: { xs: '100%', sm: '160px' }
                 }}
               >
@@ -551,18 +569,18 @@ export default function LaporanKeuangan() {
                 <IconWrapper>
                   <TrendingUpIcon sx={{ fontSize: { xs: 36, sm: 48 } }} />
                 </IconWrapper>
-                <Typography variant="subtitle1" sx={{ 
-                  mb: 1, 
-                  opacity: 0.8, 
-                  position: 'relative', 
+                <Typography variant="subtitle1" sx={{
+                  mb: 1,
+                  opacity: 0.8,
+                  position: 'relative',
                   zIndex: 1,
                   fontSize: { xs: '0.875rem', sm: '1rem' }
                 }}>
                   Total Pemasukan
                 </Typography>
-                <Typography variant="h4" sx={{ 
-                  fontWeight: 600, 
-                  position: 'relative', 
+                <Typography variant="h4" sx={{
+                  fontWeight: 600,
+                  position: 'relative',
                   zIndex: 1,
                   fontSize: { xs: '1.5rem', sm: '2rem' }
                 }}>
@@ -578,18 +596,18 @@ export default function LaporanKeuangan() {
                 <IconWrapper>
                   <TrendingDownIcon sx={{ fontSize: { xs: 36, sm: 48 } }} />
                 </IconWrapper>
-                <Typography variant="subtitle1" sx={{ 
-                  mb: 1, 
-                  opacity: 0.8, 
-                  position: 'relative', 
+                <Typography variant="subtitle1" sx={{
+                  mb: 1,
+                  opacity: 0.8,
+                  position: 'relative',
                   zIndex: 1,
                   fontSize: { xs: '0.875rem', sm: '1rem' }
                 }}>
                   Total Pengeluaran
                 </Typography>
-                <Typography variant="h4" sx={{ 
-                  fontWeight: 600, 
-                  position: 'relative', 
+                <Typography variant="h4" sx={{
+                  fontWeight: 600,
+                  position: 'relative',
                   zIndex: 1,
                   fontSize: { xs: '1.5rem', sm: '2rem' }
                 }}>
@@ -605,18 +623,18 @@ export default function LaporanKeuangan() {
                 <IconWrapper>
                   <AccountBalanceIcon sx={{ fontSize: { xs: 36, sm: 48 } }} />
                 </IconWrapper>
-                <Typography variant="subtitle1" sx={{ 
-                  mb: 1, 
-                  opacity: 0.8, 
-                  position: 'relative', 
+                <Typography variant="subtitle1" sx={{
+                  mb: 1,
+                  opacity: 0.8,
+                  position: 'relative',
                   zIndex: 1,
                   fontSize: { xs: '0.875rem', sm: '1rem' }
                 }}>
                   Saldo Akhir
                 </Typography>
-                <Typography variant="h4" sx={{ 
-                  fontWeight: 600, 
-                  position: 'relative', 
+                <Typography variant="h4" sx={{
+                  fontWeight: 600,
+                  position: 'relative',
                   zIndex: 1,
                   fontSize: { xs: '1.5rem', sm: '2rem' }
                 }}>
@@ -631,7 +649,7 @@ export default function LaporanKeuangan() {
             anchorEl={anchorEl}
             open={open}
             onClose={handleClose}
-            sx={{ 
+            sx={{
               '& .MuiPaper-root': {
                 borderRadius: '12px',
                 boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
@@ -648,14 +666,14 @@ export default function LaporanKeuangan() {
           </Menu>
 
           {/* Desktop Table View */}
-          <StyledCard sx={{ 
+          <StyledCard sx={{
             p: 0,
             background: 'white',
             color: 'inherit',
             display: { xs: 'none', md: 'block' }
           }}>
             <Box sx={{ p: 3 }}>
-              <Box sx={{ 
+              <Box sx={{
                 bgcolor: 'primary.main',
                 color: 'white',
                 p: 2,
@@ -672,6 +690,7 @@ export default function LaporanKeuangan() {
                       <TableCell>Keterangan</TableCell>
                       <TableCell align='right'>Nominal</TableCell>
                       <TableCell align='right'>Saldo</TableCell>
+                      <TableCell align='center'>Aksi</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -692,10 +711,10 @@ export default function LaporanKeuangan() {
                       </TableRow>
                     ) : (
                       filteredData.map((row, index) => (
-                        <TableRow 
+                        <TableRow
                           key={index}
-                          sx={{ 
-                            '&:hover': { 
+                          sx={{
+                            '&:hover': {
                               bgcolor: '#f8f9fa',
                               '& .action-buttons': {
                                 opacity: 1
@@ -704,30 +723,49 @@ export default function LaporanKeuangan() {
                           }}
                         >
                           <TableCell>{row.tanggal}</TableCell>
-                          <TableCell sx={{ 
+                          <TableCell sx={{
                             maxWidth: { md: '300px' },
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap'
                           }}>{row.keterangan}</TableCell>
                           <TableCell
-                            align='right' 
-                            sx={{ 
+                            align='right'
+                            sx={{
                               color: row.pemasukan > 0 ? '#2e7d32' : '#d32f2f',
                               fontWeight: 600,
                               whiteSpace: 'nowrap'
                             }}
                           >
-                            {row.pemasukan > 0 
+                            {row.pemasukan > 0
                               ? `+ ${formatRupiah(row.pemasukan)}`
                               : `- ${formatRupiah(row.pengeluaran)}`
                             }
                           </TableCell>
-                          <TableCell align='right' sx={{ 
+                          <TableCell align='right' sx={{
                             fontWeight: 600,
                             whiteSpace: 'nowrap'
                           }}>
                             {formatRupiah(row.total_saldo)}
+                          </TableCell>
+                          <TableCell align='center' sx={{ whiteSpace: 'nowrap' }}>
+                            <IconButton
+                              onClick={() => handleDelete(
+                                row.id_pemasukan || row.id_pengeluaran,
+                                row.pemasukan > 0 ? 'pemasukan' : 'pengeluaran'
+                              )}
+                              color="error"
+                              sx={{
+                                opacity: 0.7,
+                                transition: 'opacity 0.2s',
+                                '&:hover': {
+                                  opacity: 1,
+                                  backgroundColor: 'rgba(211, 47, 47, 0.08)'
+                                }
+                              }}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
                           </TableCell>
                         </TableRow>
                       ))
@@ -741,7 +779,7 @@ export default function LaporanKeuangan() {
           {/* Mobile Card View */}
           <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
             {filteredData.map((row, index) => (
-              <Card 
+              <Card
                 key={index}
                 sx={{
                   borderRadius: '16px',
@@ -762,15 +800,6 @@ export default function LaporanKeuangan() {
 
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="caption" color="textSecondary">
-                      Kategori
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {row.kategori}
-                    </Typography>
-                  </Box>
-
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="caption" color="textSecondary">
                       Keterangan
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
@@ -782,14 +811,14 @@ export default function LaporanKeuangan() {
                     <Typography variant="caption" color="textSecondary">
                       Nominal
                     </Typography>
-                    <Typography 
-                      variant="body1" 
-                      sx={{ 
+                    <Typography
+                      variant="body1"
+                      sx={{
                         fontWeight: 600,
                         color: row.pemasukan > 0 ? '#2e7d32' : '#d32f2f'
                       }}
                     >
-                      {row.pemasukan > 0 
+                      {row.pemasukan > 0
                         ? `+ ${formatRupiah(row.pemasukan)}`
                         : `- ${formatRupiah(row.pengeluaran)}`
                       }
@@ -805,8 +834,8 @@ export default function LaporanKeuangan() {
                     </Typography>
                   </Box>
 
-                  <Box sx={{ 
-                    display: 'flex', 
+                  <Box sx={{
+                    display: 'flex',
                     justifyContent: 'flex-end',
                     borderTop: '1px solid',
                     borderColor: 'divider',
@@ -834,9 +863,9 @@ export default function LaporanKeuangan() {
               </Card>
             ))}
             {filteredData.length === 0 && (
-              <Box 
-                sx={{ 
-                  textAlign: 'center', 
+              <Box
+                sx={{
+                  textAlign: 'center',
                   py: 8,
                   bgcolor: 'background.paper',
                   borderRadius: '16px',
@@ -852,8 +881,8 @@ export default function LaporanKeuangan() {
           </Box>
 
           {/* Mobile Info Message */}
-          <Box sx={{ 
-            display: { xs: 'block', md: 'none' }, 
+          <Box sx={{
+            display: { xs: 'block', md: 'none' },
             mt: 2,
             p: 2,
             bgcolor: 'background.paper',

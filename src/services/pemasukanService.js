@@ -149,7 +149,7 @@ export const pemasukanService = {
             if (!token) {
                 throw new Error('Token tidak ditemukan');
             }
-
+    
             const response = await fetch('/api/pemasukan/getall', {
                 method: 'GET',
                 headers: {
@@ -158,14 +158,35 @@ export const pemasukanService = {
                 },
                 credentials: 'include'
             });
-
+    
+            // Handle non-OK responses
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Gagal mengambil data pemasukan');
+                let errorMessage = 'Gagal mengambil data pemasukan';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorMessage;
+                } catch (e) {
+                    console.error('Error parsing error response:', e);
+                }
+                throw new Error(errorMessage);
             }
-
-            const { data } = await response.json();
-            return data;
+    
+            // Parse response
+            const result = await response.json();
+            
+            // Validasi struktur response
+            if (!result) {
+                throw new Error('Response tidak valid');
+            }
+    
+            // Pastikan data adalah array
+            const responseData = Array.isArray(result.data) ? result.data : 
+                              Array.isArray(result) ? result : [];
+    
+            // Debugging log
+            console.log('Data pemasukan:', responseData);
+            
+            return responseData;
         } catch (error) {
             console.error('Error in getAllPemasukan:', error);
             throw error;
