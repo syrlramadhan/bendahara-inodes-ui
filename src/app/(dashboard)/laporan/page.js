@@ -24,8 +24,9 @@ import {
   CircularProgress,
   IconButton,
   CardContent,
-  TextField,
-  InputAdornment
+  Select,
+  FormControl,
+  InputLabel
 } from '@mui/material'
 import { 
   FileDownload as FileDownloadIcon,
@@ -35,8 +36,7 @@ import {
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
   AccountBalance as AccountBalanceIcon,
-  Delete as DeleteIcon,
-  Search as SearchIcon
+  Delete as DeleteIcon
 } from '@mui/icons-material'
 import { colors } from '@/styles/colors'
 import jsPDF from 'jspdf'
@@ -47,7 +47,7 @@ import { pemasukanService } from '@/services/pemasukanService'
 import { pengeluaranService } from '@/services/pengeluaranService'
 import { transaksiService } from '@/services/transaksiService'
 
-// Animations and styled components remain the same as your original code
+// Animasi dan styled components tetap sama seperti kode asli
 const slideUp = keyframes`
   from {
     transform: translateY(50px);
@@ -189,10 +189,29 @@ const StyledButton = styled(Button)(({ theme }) => ({
   },
 }));
 
+const StyledFormControl = styled(FormControl)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: '12px',
+    backgroundColor: theme.palette.background.paper,
+    '&:hover .MuiOutlinedInput-notchedOutline': {
+      borderColor: '#1976D2',
+    },
+    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+      borderColor: '#1976D2',
+    },
+  },
+  '& .MuiInputLabel-root': {
+    color: theme.palette.text.secondary,
+    '&.Mui-focused': {
+      color: '#1976D2',
+    },
+  },
+}));
+
 export default function LaporanKeuangan() {
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
-  const [searchQuery, setSearchQuery] = useState('')
+  const [timeRange, setTimeRange] = useState('all') // State untuk filter rentang waktu
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [anchorEl, setAnchorEl] = useState(null)
@@ -204,29 +223,65 @@ export default function LaporanKeuangan() {
     fetchData()
   }, [refreshKey])
 
+  // Fungsi untuk menghitung rentang tanggal berdasarkan filter
+  const getDateRange = (range) => {
+    const today = new Date()
+    const startDate = new Date()
+    
+    switch (range) {
+      case 'today':
+        return { start: today, end: today }
+      case 'yesterday':
+        startDate.setDate(today.getDate() - 1)
+        return { start: startDate, end: startDate }
+      case '7days':
+        startDate.setDate(today.getDate() - 7)
+        return { start: startDate, end: today }
+      case '1month':
+        startDate.setMonth(today.getMonth() - 1)
+        return { start: startDate, end: today }
+      case '3months':
+        startDate.setMonth(today.getMonth() - 3)
+        return { start: startDate, end: today }
+      case '6months':
+        startDate.setMonth(today.getMonth() - 6)
+        return { start: startDate, end: today }
+      case '1year':
+        startDate.setFullYear(today.getFullYear() - 1)
+        return { start: startDate, end: today }
+      case 'all':
+      default:
+        return { start: null, end: null }
+    }
+  }
+
+  // Filter data berdasarkan rentang waktu
   useEffect(() => {
-    const filtered = data.filter(item => 
-      item.keterangan?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.kategori?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.tanggal?.includes(searchQuery)
-    )
+    const { start, end } = getDateRange(timeRange)
+    
+    if (!start || !end) {
+      setFilteredData(data)
+      return
+    }
+
+    const filtered = data.filter(item => {
+      const itemDate = new Date(item.tanggal)
+      return itemDate >= start && itemDate <= end
+    })
     setFilteredData(filtered)
-  }, [searchQuery, data])
+  }, [timeRange, data])
 
   const fetchData = async () => {
     try {
       setLoading(true)
       setError(null)
       
-      // Get all reports data
       const laporanData = await laporanService.getAllLaporan()
       console.log('Laporan data:', laporanData)
       
-      // Get transaction history
       const transaksiData = await transaksiService.getAllTransaksi()
       console.log('Transaction data:', transaksiData)
       
-      // Combine data if needed or use whichever is appropriate
       setData(laporanData || [])
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -267,7 +322,7 @@ export default function LaporanKeuangan() {
       doc.text(`Total Pengeluaran: ${formatRupiah(totalPengeluaran)}`, 14, 42)
       doc.text(`Saldo Akhir: ${formatRupiah(saldoAkhir)}`, 14, 49)
       
-      const tableData = data.map(row => [
+      const tableData = filteredData.map(row => [
         row.tanggal,
         row.keterangan,
         formatRupiah(row.pemasukan || 0),
@@ -313,7 +368,7 @@ export default function LaporanKeuangan() {
   }
 
   const exportToExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(data.map(row => ({
+    const ws = XLSX.utils.json_to_sheet(filteredData.map(row => ({
       Tanggal: row.tanggal,
       Keterangan: row.keterangan,
       Pemasukan: row.pemasukan,
@@ -357,7 +412,6 @@ export default function LaporanKeuangan() {
     try {
       setLoading(true)
       
-      // Call the appropriate service based on transaction type
       if (jenis === 'pemasukan') {
         await pemasukanService.deletePemasukan(id)
       } else if (jenis === 'pengeluaran') {
@@ -366,7 +420,6 @@ export default function LaporanKeuangan() {
         throw new Error('Jenis transaksi tidak valid')
       }
       
-      // Refresh the data
       const updatedData = await laporanService.getAllLaporan()
       setData(updatedData)
       
@@ -387,10 +440,21 @@ export default function LaporanKeuangan() {
     }
   }
 
-  // Calculate totals
-  const totalPemasukan = data.reduce((sum, item) => sum + (item.pemasukan || 0), 0)
-  const totalPengeluaran = data.reduce((sum, item) => sum + (item.pengeluaran || 0), 0)
-  const saldoAkhir = data.length > 0 ? data[0].total_saldo : 0
+  const totalPemasukan = filteredData.reduce((sum, item) => sum + (item.pemasukan || 0), 0)
+  const totalPengeluaran = filteredData.reduce((sum, item) => sum + (item.pengeluaran || 0), 0)
+  const saldoAkhir = filteredData.length > 0 ? filteredData[0].total_saldo : 0
+
+  // Opsi untuk dropdown filter
+  const timeRangeOptions = [
+    { value: 'today', label: 'Hari Ini' },
+    { value: 'yesterday', label: 'Kemarin' },
+    { value: '7days', label: '7 Hari Terakhir' },
+    { value: '1month', label: '1 Bulan Terakhir' },
+    { value: '3months', label: '3 Bulan Terakhir' },
+    { value: '6months', label: '6 Bulan Terakhir' },
+    { value: '1year', label: '1 Tahun Terakhir' },
+    { value: 'all', label: 'Semua' }
+  ]
 
   return (
     <AnimatedContainer maxWidth="lg" sx={{ 
@@ -432,27 +496,26 @@ export default function LaporanKeuangan() {
               width: { xs: '100%', sm: 'auto' },
               flexDirection: { xs: 'column', sm: 'row' }
             }}>
-              <TextField
-                placeholder="Cari transaksi..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                variant="outlined"
-                size="small"
+              <StyledFormControl 
+                variant="outlined" 
+                size="small" 
                 sx={{ 
-                  minWidth: { xs: '100%', sm: '250px' },
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
-                    bgcolor: 'background.paper'
-                  }
+                  minWidth: { xs: '100%', sm: '250px' }
                 }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon color="action" />
-                    </InputAdornment>
-                  )
-                }}
-              />
+              >
+                <InputLabel>Filter Periode</InputLabel>
+                <Select
+                  value={timeRange}
+                  onChange={(e) => setTimeRange(e.target.value)}
+                  label="Filter Periode"
+                >
+                  {timeRangeOptions.map(option => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </StyledFormControl>
               <Button
                 variant="outlined"
                 onClick={refreshData}
@@ -623,7 +686,7 @@ export default function LaporanKeuangan() {
                         <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                           <AccountBalanceIcon sx={{ fontSize: 48, color: '#ccc', mb: 2 }} />
                           <Typography variant="body1" color="textSecondary">
-                            {searchQuery ? 'Tidak ada data yang sesuai dengan pencarian' : 'Belum ada data transaksi'}
+                            Tidak ada data untuk periode ini
                           </Typography>
                         </TableCell>
                       </TableRow>
@@ -782,7 +845,7 @@ export default function LaporanKeuangan() {
               >
                 <AccountBalanceIcon sx={{ fontSize: 48, color: '#ccc', mb: 2 }} />
                 <Typography variant="body1" color="textSecondary">
-                  {searchQuery ? 'Tidak ada data yang sesuai dengan pencarian' : 'Belum ada data transaksi'}
+                  Tidak ada data untuk periode ini
                 </Typography>
               </Box>
             )}
