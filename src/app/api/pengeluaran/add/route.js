@@ -22,14 +22,38 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
+        // Ambil nilai tanggal dari formData
+        const tanggal = formData.get('tanggal');
+        if (!tanggal) {
+            return NextResponse.json({
+                success: false,
+                message: 'Tanggal harus diisi'
+            }, { status: 400 });
+        }
+
+        // Validasi format tanggal
+        const dateRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
+        if (!dateRegex.test(tanggal)) {
+            return NextResponse.json({
+                success: false,
+                message: 'Format tanggal tidak valid (YYYY-MM-DD HH:MM)'
+            }, { status: 400 });
+        }
+
+        // Buat objek FormData baru untuk dikirim ke backend
+        const newFormData = new FormData();
+        newFormData.append('nota', nota);
+        newFormData.append('tanggal', tanggal);
+        newFormData.append('keterangan', formData.get('keterangan'));
+        newFormData.append('nominal', formData.get('nominal'));
+
         // Forward request ke backend API
         const response = await fetch(API_ENDPOINTS.PENGELUARAN_ADD, {
             method: 'POST',
             headers: {
-                'Authorization': token,
-                'ngrok-skip-browser-warning': 'true'
+                'Authorization': token
             },
-            body: formData
+            body: newFormData
         });
 
         // Coba parse response sebagai text terlebih dahulu
@@ -49,7 +73,7 @@ export async function POST(request) {
                 headers: {
                     'Access-Control-Allow-Origin': '*',
                     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                    'Access-Control-Allow-Headers': 'Content-Type, Authorization, ngrok-skip-browser-warning'
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
                 }
             });
         }
@@ -63,7 +87,7 @@ export async function POST(request) {
                 headers: {
                     'Access-Control-Allow-Origin': '*',
                     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                    'Access-Control-Allow-Headers': 'Content-Type, Authorization, ngrok-skip-browser-warning'
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
                 }
             });
         }
@@ -76,7 +100,7 @@ export async function POST(request) {
             headers: {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization, ngrok-skip-browser-warning'
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization'
             }
         });
     } catch (error) {
@@ -89,7 +113,7 @@ export async function POST(request) {
             headers: {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization, ngrok-skip-browser-warning'
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization'
             }
         });
     }
@@ -100,7 +124,7 @@ export async function OPTIONS() {
         headers: {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization, ngrok-skip-browser-warning'
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
         }
     });
-} 
+}

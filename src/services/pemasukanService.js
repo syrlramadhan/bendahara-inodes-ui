@@ -7,61 +7,51 @@ export const pemasukanService = {
      * @param {Object} data - Income data
      * @returns {Promise<Object>} Response data
      */
-    addPemasukan: async (data) => {
+    async addPemasukan(data) {
         try {
-            // Validation
-            if (!data.tanggal || isNaN(Date.parse(data.tanggal))) {
-                throw new Error('Format tanggal tidak valid');
-            }
-
-            const nominal = typeof data.nominal === 'string' 
-                ? parseInt(data.nominal.replace(/\D/g, '')) 
-                : parseInt(data.nominal);
-
-            if (isNaN(nominal) || nominal <= 0) {
-                throw new Error('Nominal harus berupa angka positif');
-            }
-
-            if (nominal.toString().length > 11) {
-                throw new Error('Nominal terlalu besar (maksimal puluhan milyar)');
-            }
-
-            if (!data.kategori?.trim()) {
-                throw new Error('Kategori tidak boleh kosong');
-            }
-
-            if (!data.keterangan?.trim()) {
-                throw new Error('Keterangan tidak boleh kosong');
-            }
-
             const token = Cookies.get('authToken');
-            if (!token) {
-                throw new Error('Token tidak ditemukan');
-            }
-
+            if (!token) throw new Error('Token tidak ditemukan');
+    
+            // Convert date from datetime-local (YYYY-MM-DDTHH:mm) to backend format (YYYY-MM-DD HH:mm)
+            const formatDateForBackend = (dateString) => {
+                const date = new Date(dateString);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                
+                return `${year}-${month}-${day} ${hours}:${minutes}`;
+            };
+    
+            // Prepare payload with properly formatted date
+            const payload = {
+                tanggal: formatDateForBackend(data.tanggal), // Formatted for backend
+                nominal: Number(data.nominal.toString().replace(/\D/g, '')),
+                kategori: data.kategori.trim(),
+                keterangan: data.keterangan.trim()
+            };
+        
             const response = await fetch('/api/pemasukan/add', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
-                    'ngrok-skip-browser-warning': 'true'
                 },
-                body: JSON.stringify({
-                    tanggal: data.tanggal,
-                    nominal: nominal,
-                    kategori: data.kategori.trim(),
-                    keterangan: data.keterangan.trim()
-                }),
-                credentials: 'include'
+                body: JSON.stringify(payload),
             });
-
-            const responseData = await response.json();
-
+    
+            const result = await response.json();
+    
             if (!response.ok) {
-                throw new Error(responseData.message || 'Gagal menambah pemasukan');
+                throw new Error(result.message || 'Gagal menambah pemasukan');
             }
-
-            return responseData;
+    
+            return {
+                success: true,
+                data: result.data,
+                message: result.message || 'Pemasukan berhasil ditambahkan'
+            };
         } catch (error) {
             console.error('Error in addPemasukan:', error);
             throw error;
@@ -74,61 +64,38 @@ export const pemasukanService = {
      * @param {Object} data - Updated data
      * @returns {Promise<Object>} Response data
      */
-    updatePemasukan: async (id, data) => {
+    async updatePemasukan(id, data) {
         try {
             const token = Cookies.get('authToken');
-            if (!token) {
-                throw new Error('Token tidak ditemukan');
-            }
+            if (!token) throw new Error('Token tidak ditemukan');
 
-            if (!id) {
-                throw new Error('ID tidak valid');
-            }
-
-            // Validation
-            if (!data.tanggal || isNaN(Date.parse(data.tanggal))) {
-                throw new Error('Format tanggal tidak valid');
-            }
-
-            const nominal = typeof data.nominal === 'string' 
-                ? parseInt(data.nominal.replace(/\D/g, '')) 
-                : parseInt(data.nominal);
-
-            if (isNaN(nominal) || nominal <= 0) {
-                throw new Error('Nominal harus berupa angka positif');
-            }
-
-            if (!data.kategori?.trim()) {
-                throw new Error('Kategori tidak boleh kosong');
-            }
-
-            if (!data.keterangan?.trim()) {
-                throw new Error('Keterangan tidak boleh kosong');
-            }
+            const payload = {
+                tanggal: new Date(data.tanggal).toISOString(),
+                nominal: Number(data.nominal.toString().replace(/\D/g, '')),
+                kategori: data.kategori.trim(),
+                keterangan: data.keterangan.trim()
+            };
 
             const response = await fetch(`/api/pemasukan/update/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
-                    'ngrok-skip-browser-warning': 'true'
                 },
-                body: JSON.stringify({
-                    tanggal: data.tanggal,
-                    nominal: nominal,
-                    kategori: data.kategori.trim(),
-                    keterangan: data.keterangan.trim()
-                }),
-                credentials: 'include'
+                body: JSON.stringify(payload),
             });
 
-            const responseData = await response.json();
+            const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(responseData.message || 'Gagal mengupdate pemasukan');
+                throw new Error(result.message || 'Gagal mengupdate pemasukan');
             }
 
-            return responseData;
+            return {
+                success: true,
+                data: result.data,
+                message: result.message || 'Pemasukan berhasil diupdate'
+            };
         } catch (error) {
             console.error('Error in updatePemasukan:', error);
             throw error;

@@ -14,13 +14,25 @@ export const pengeluaranService = {
                 throw new Error('Token tidak ditemukan');
             }
 
+            // Convert date from datetime-local to backend format (YYYY-MM-DD HH:mm)
+            const formatDateForBackend = (dateString) => {
+                const date = new Date(dateString);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+
+                return `${year}-${month}-${day} ${hours}:${minutes}`;
+            };
+
             // Validation
             if (!data.tanggal || isNaN(Date.parse(data.tanggal))) {
                 throw new Error('Format tanggal tidak valid');
             }
 
-            const nominal = typeof data.nominal === 'string' 
-                ? parseInt(data.nominal.replace(/\D/g, '')) 
+            const nominal = typeof data.nominal === 'string'
+                ? parseInt(data.nominal.replace(/\D/g, ''))
                 : parseInt(data.nominal);
 
             if (isNaN(nominal) || nominal <= 0) {
@@ -35,11 +47,12 @@ export const pengeluaranService = {
                 throw new Error('Nota harus diupload');
             }
 
+            // Prepare FormData with properly formatted date
             const formData = new FormData();
-            formData.append('tanggal', data.tanggal);
+            formData.append('tanggal', formatDateForBackend(data.tanggal)); // Formatted date
             formData.append('nominal', nominal);
             formData.append('keterangan', data.keterangan.trim());
-            formData.append('nota', data.nota);
+            formData.append('nota', data.nota); // File object
 
             const response = await fetch('/api/pengeluaran/add', {
                 method: 'POST',
@@ -51,7 +64,15 @@ export const pengeluaranService = {
                 credentials: 'include'
             });
 
-            const responseData = await response.json();
+            // Handle non-JSON responses
+            const responseText = await response.text();
+            let responseData;
+
+            try {
+                responseData = JSON.parse(responseText);
+            } catch {
+                responseData = { message: responseText };
+            }
 
             if (!response.ok) {
                 throw new Error(responseData.message || 'Gagal menambah pengeluaran');
@@ -86,8 +107,8 @@ export const pengeluaranService = {
                 throw new Error('Format tanggal tidak valid');
             }
 
-            const nominal = typeof data.nominal === 'string' 
-                ? parseInt(data.nominal.replace(/\D/g, '')) 
+            const nominal = typeof data.nominal === 'string'
+                ? parseInt(data.nominal.replace(/\D/g, ''))
                 : parseInt(data.nominal);
 
             if (isNaN(nominal) || nominal <= 0) {
@@ -102,7 +123,7 @@ export const pengeluaranService = {
             formData.append('tanggal', data.tanggal);
             formData.append('nominal', nominal);
             formData.append('keterangan', data.keterangan.trim());
-            
+
             if (data.nota) {
                 formData.append('nota', data.nota);
             }

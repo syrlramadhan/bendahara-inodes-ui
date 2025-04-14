@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
   Button,
   Dialog,
   DialogTitle,
@@ -24,10 +25,12 @@ import {
   Alert,
   Fade,
   CircularProgress,
+  Avatar
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
+import MoneyOffIcon from '@mui/icons-material/MoneyOff'
 import ReceiptIcon from '@mui/icons-material/Receipt'
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
 import { styled } from '@mui/material/styles'
@@ -123,10 +126,11 @@ export default function Pengeluaran() {
     try {
       setLoading(true)
       const response = await pengeluaranService.getAllPengeluaran()
-      setRows(response || [])
+      const pengeluaranData = response.filter(item => item.nominal > 0)
+      setRows(pengeluaranData)
     } catch (error) {
       console.error('Error fetching data:', error)
-      showAlertMessage('Gagal mengambil data pengeluaran', 'error')
+      showAlertMessage('Gagal mengambil data', 'error')
     } finally {
       setLoading(false)
     }
@@ -140,14 +144,16 @@ export default function Pengeluaran() {
         ...prev,
         [name]: file
       }))
-      // Create preview URL for image
+      // Buat preview URL untuk gambar
       if (file) {
         const url = URL.createObjectURL(file)
         setPreviewUrl(url)
       }
     } else if (name === 'nominal') {
-      // Remove non-digit characters
+      console.log('Input nominal value:', value)
+      // Hapus semua karakter non-digit
       const numericValue = value.replace(/\D/g, '')
+      console.log('Numeric value:', numericValue)
       setFormData(prev => ({
         ...prev,
         [name]: numericValue
@@ -173,14 +179,15 @@ export default function Pengeluaran() {
   }
 
   const handleEdit = (row) => {
-    setEditingId(row.id_pengeluaran)
+    console.log('Editing row:', row);
+    setEditingId(row.id) // Menggunakan id dari data yang diterima
     setFormData({
       tanggal: row.tanggal,
       nominal: row.nominal.toString(),
       keterangan: row.keterangan,
       nota: null
     })
-    // Set preview URL if nota exists
+    // Set preview URL jika ada nota
     if (row.nota) {
       setPreviewUrl(`${UPLOAD_URL}${row.nota}`)
     } else {
@@ -192,19 +199,23 @@ export default function Pengeluaran() {
   const handleDelete = async (id) => {
     if (!id) {
       console.log('Invalid data:', { id });
-      showAlertMessage('Data tidak valid untuk dihapus (ID tidak ditemukan)', 'error');
+      showAlertMessage('Data tidak valid untuk dihapus (No/ID tidak ditemukan)', 'error');
       return;
     }
 
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus pengeluaran dengan ID ${id}?`)) {
+    // Konfirmasi penghapusan
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus pengeluaran dengan No ${id}?`)) {
       return;
     }
 
     try {
       setLoading(true);
-      await pengeluaranService.deletePengeluaran(id);
+      await pengeluaranService.deletePengeluaran(id, 'pengeluaran');
+
+      // Refresh data setelah menghapus
       await fetchData();
-      showAlertMessage(`Pengeluaran dengan ID ${id} berhasil dihapus`, 'success');
+
+      showAlertMessage(`Pengeluaran dengan No ${id} berhasil dihapus`, 'success');
     } catch (error) {
       console.error('Error deleting data:', error);
       showAlertMessage(`Gagal menghapus pengeluaran: ${error.message}`, 'error');
@@ -222,62 +233,36 @@ export default function Pengeluaran() {
 
   const handleSave = async () => {
     try {
-      // Validation
-      if (!formData.tanggal) {
-        showAlertMessage('Tanggal harus diisi', 'error');
-        return;
-      }
-
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(formData.tanggal)) {
-        showAlertMessage('Format tanggal tidak valid (YYYY-MM-DD)', 'error');
-        return;
-      }
-
-      if (!formData.nominal || isNaN(formData.nominal) || parseFloat(formData.nominal) <= 0) {
-        showAlertMessage('Nominal harus berupa angka positif', 'error');
-        return;
-      }
-
-      if (!formData.keterangan || formData.keterangan.trim() === '') {
-        showAlertMessage('Keterangan tidak boleh kosong', 'error');
-        return;
-      }
-
-      // Validate receipt for new entries
-      if (!editingId && !formData.nota) {
-        showAlertMessage('Nota harus diupload', 'error');
-        return;
-      }
-
       setLoading(true);
 
-      // Prepare form data
-      const formDataToSend = new FormData();
-      formDataToSend.append('tanggal', formData.tanggal);
-      formDataToSend.append('nominal', formData.nominal);
-      formDataToSend.append('keterangan', formData.keterangan);
-      if (formData.nota) {
-        formDataToSend.append('nota', formData.nota);
+      // Konversi format tanggal dari datetime-local (YYYY-MM-DDTHH:mm) ke YYYY-MM-DD HH:mm
+      const dateObj = new Date(formData.tanggal);
+      const formattedDate = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')} ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
+
+      const dataToSend = {
+        tanggal: formattedDate, // Format: "YYYY-MM-DD HH:mm"
+        nominal: parseFloat(formData.nominal),
+        keterangan: formData.keterangan.trim(),
+        nota: formData.nota
+      };
+
+      let result;
+      if (editingId) {
+        result = await pengeluaranService.updatePengeluaran(editingId, dataToSend);
+      } else {
+        result = await pengeluaranService.addPengeluaran(dataToSend);
       }
 
-      if (editingId) {
-        await pengeluaranService.updatePengeluaran(editingId, formDataToSend);
-        showAlertMessage('Data pengeluaran berhasil diperbarui', 'success');
-      } else {
-        await pengeluaranService.addPengeluaran(formDataToSend);
-        showAlertMessage('Data pengeluaran berhasil ditambahkan', 'success');
-      }
-      
+      showAlertMessage(result.message, 'success');
       setShowModal(false);
-      fetchData();
+      await fetchData();
     } catch (error) {
       console.error('Error saving data:', error);
-      showAlertMessage(error.message || 'Gagal menyimpan data pengeluaran', 'error');
+      showAlertMessage(error.message || 'Gagal menyimpan data', 'error');
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', {
@@ -288,6 +273,18 @@ export default function Pengeluaran() {
     }).format(amount)
   }
 
+  const formatDateTime = (dateTimeString) => {
+    const date = new Date(dateTimeString);
+    return date.toLocaleString('id-ID', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  }
+
   const totalPengeluaran = rows.reduce((sum, row) => sum + (row.nominal || 0), 0)
 
   const handleClose = () => {
@@ -296,17 +293,17 @@ export default function Pengeluaran() {
   }
 
   return (
-    <Box sx={{ 
+    <Box sx={{
       padding: '24px',
       mt: { xs: '64px', sm: '80px' }
     }}>
       <Fade in={showAlert}>
-        <Alert 
+        <Alert
           severity={alertType}
-          sx={{ 
-            position: 'fixed', 
-            top: 24, 
-            right: 24, 
+          sx={{
+            position: 'fixed',
+            top: 24,
+            right: 24,
             zIndex: 9999,
             boxShadow: '0 4px 20px 0 rgba(0,0,0,0.1)',
             borderRadius: '12px'
@@ -377,10 +374,10 @@ export default function Pengeluaran() {
                   </TableRow>
                 ) : (
                   rows.map((row, index) => (
-                    <TableRow 
-                      key={row.id_pengeluaran} 
-                      sx={{ 
-                        '&:hover': { 
+                    <TableRow
+                      key={`${row.tanggal}-${index}`}
+                      sx={{
+                        '&:hover': {
                           bgcolor: '#f8f9fa',
                           '& .action-buttons': {
                             opacity: 1
@@ -390,14 +387,14 @@ export default function Pengeluaran() {
                     >
                       <TableCell>{index + 1}</TableCell>
                       <TableCell>{row.tanggal}</TableCell>
-                      <TableCell sx={{ 
-                        color: '#d32f2f', 
+                      <TableCell sx={{
+                        color: '#d32f2f',
                         fontWeight: 600,
                         whiteSpace: 'nowrap'
                       }}>
                         {formatCurrency(row.nominal)}
                       </TableCell>
-                      <TableCell sx={{ 
+                      <TableCell sx={{
                         maxWidth: { xs: '120px', sm: '200px' },
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -410,7 +407,7 @@ export default function Pengeluaran() {
                           <IconButton
                             size="small"
                             onClick={() => window.open(`${UPLOAD_URL}${row.nota}`, '_blank')}
-                            sx={{ 
+                            sx={{
                               color: '#1a237e',
                               width: { xs: '35px', sm: '30px' },
                               height: { xs: '35px', sm: '30px' }
@@ -425,9 +422,9 @@ export default function Pengeluaran() {
                         )}
                       </TableCell>
                       <TableCell align="center">
-                        <Box 
+                        <Box
                           className="action-buttons"
-                          sx={{ 
+                          sx={{
                             opacity: { xs: 1, sm: 0.5 },
                             transition: 'opacity 0.2s',
                             display: 'flex',
@@ -436,10 +433,10 @@ export default function Pengeluaran() {
                           }}
                         >
                           <Tooltip title="Edit">
-                            <IconButton 
-                              size="small" 
+                            <IconButton
+                              size="small"
                               onClick={() => handleEdit(row)}
-                              sx={{ 
+                              sx={{
                                 color: '#1a237e',
                                 width: { xs: '35px', sm: '30px' },
                                 height: { xs: '35px', sm: '30px' }
@@ -449,10 +446,10 @@ export default function Pengeluaran() {
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="Hapus">
-                            <IconButton 
-                              size="small" 
-                              onClick={() => handleDelete(row.id_pengeluaran)}
-                              sx={{ 
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDelete(row.id)}
+                              sx={{
                                 color: '#d32f2f',
                                 width: { xs: '35px', sm: '30px' },
                                 height: { xs: '35px', sm: '30px' }
@@ -472,8 +469,8 @@ export default function Pengeluaran() {
         </CardContent>
       </StyledCard>
 
-      <Dialog 
-        open={showModal} 
+      <Dialog
+        open={showModal}
         onClose={handleClose}
         maxWidth="sm"
         fullWidth
@@ -488,7 +485,7 @@ export default function Pengeluaran() {
           }
         }}
       >
-        <DialogTitle sx={{ 
+        <DialogTitle sx={{
           pb: 2,
           pt: 3,
           px: 3,
@@ -517,8 +514,8 @@ export default function Pengeluaran() {
           )}
         </DialogTitle>
 
-        <DialogContent 
-          sx={{ 
+        <DialogContent
+          sx={{
             py: 4,
             px: { xs: 3, sm: 4 },
             display: 'flex',
@@ -549,14 +546,14 @@ export default function Pengeluaran() {
           </Box>
 
           <TextField
-            label="Tanggal"
+            label="Tanggal dan Waktu"
             name="tanggal"
-            type="date"
+            type="datetime-local"
             value={formData.tanggal}
             onChange={handleInputChange}
             fullWidth
             required
-            InputLabelProps={{ 
+            InputLabelProps={{
               shrink: true,
               sx: { fontWeight: 500 }
             }}
@@ -588,10 +585,10 @@ export default function Pengeluaran() {
             }}
             InputProps={{
               startAdornment: (
-                <Typography sx={{ 
-                  mr: 1, 
+                <Typography sx={{
+                  mr: 1,
                   color: '#666',
-                  fontWeight: 500 
+                  fontWeight: 500
                 }}>
                   Rp
                 </Typography>
@@ -639,9 +636,9 @@ export default function Pengeluaran() {
           />
 
           <Box sx={{ mb: 1 }}>
-            <Typography 
-              variant="subtitle1" 
-              sx={{ 
+            <Typography
+              variant="subtitle1"
+              sx={{
                 mb: 2,
                 fontWeight: 500,
                 color: theme => theme.palette.text.primary,
@@ -679,7 +676,7 @@ export default function Pengeluaran() {
               <label htmlFor="nota-upload" style={{ cursor: 'pointer' }}>
                 {previewUrl ? (
                   <Box sx={{ position: 'relative' }}>
-                    <img 
+                    <img
                       src={previewUrl}
                       alt="Preview Nota"
                       style={{
@@ -688,9 +685,9 @@ export default function Pengeluaran() {
                         borderRadius: '8px'
                       }}
                     />
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
+                    <Typography
+                      variant="caption"
+                      sx={{
                         display: 'block',
                         mt: 2,
                         color: 'text.secondary'
@@ -715,17 +712,17 @@ export default function Pengeluaran() {
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ 
+        <DialogActions sx={{
           px: 4,
           py: 3,
           borderTop: '1px solid rgba(0, 0, 0, 0.1)',
           gap: 2,
           bgcolor: 'rgba(0, 0, 0, 0.02)'
         }}>
-          <Button 
+          <Button
             onClick={handleClose}
             variant="outlined"
-            sx={{ 
+            sx={{
               borderRadius: '10px',
               borderColor: '#666',
               color: '#666',
@@ -740,14 +737,14 @@ export default function Pengeluaran() {
           >
             Batal
           </Button>
-          <Button 
+          <Button
             onClick={handleSave}
             variant="contained"
             disabled={loading}
-            sx={{ 
+            sx={{
               borderRadius: '10px',
               bgcolor: '#1a237e',
-              '&:hover': { 
+              '&:hover': {
                 bgcolor: '#0d47a1'
               },
               px: 3,
