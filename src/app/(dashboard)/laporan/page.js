@@ -207,7 +207,7 @@ export default function LaporanKeuangan() {
   useEffect(() => {
     const filtered = data.filter(item => 
       item.keterangan?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      // item.kategori?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.kategori?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.tanggal?.includes(searchQuery)
     )
     setFilteredData(filtered)
@@ -286,11 +286,11 @@ export default function LaporanKeuangan() {
           cellPadding: 2
         },
         columnStyles: {
-          0: { cellWidth: 25},
-          1: { cellWidth: 40},
-          2: { cellWidth: 40},
-          3: { cellWidth: 40},
-          4: { cellWidth: 40}
+          0: { cellWidth: 25 },
+          1: { cellWidth: 60 },
+          2: { cellWidth: 40, halign: 'right' },
+          3: { cellWidth: 40, halign: 'right' },
+          4: { cellWidth: 40, halign: 'right' }
         },
         headStyles: { 
           fillColor: [63, 81, 181],
@@ -607,8 +607,8 @@ export default function LaporanKeuangan() {
                     <TableRow>
                       <TableCell>Tanggal</TableCell>
                       <TableCell>Keterangan</TableCell>
-                      <TableCell align="right">Nominal</TableCell>
-                      <TableCell align="right">Saldo</TableCell>
+                      <TableCell align='right'>Nominal</TableCell>
+                      <TableCell align='right'>Saldo</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -647,8 +647,8 @@ export default function LaporanKeuangan() {
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap'
                           }}>{row.keterangan}</TableCell>
-                          <TableCell 
-                            align="right"
+                          <TableCell
+                            align='right' 
                             sx={{ 
                               color: row.pemasukan > 0 ? '#2e7d32' : '#d32f2f',
                               fontWeight: 600,
@@ -660,38 +660,12 @@ export default function LaporanKeuangan() {
                               : `- ${formatRupiah(row.pengeluaran)}`
                             }
                           </TableCell>
-                          <TableCell align="right" sx={{ 
+                          <TableCell align='right' sx={{ 
                             fontWeight: 600,
                             whiteSpace: 'nowrap'
                           }}>
                             {formatRupiah(row.total_saldo)}
                           </TableCell>
-                          {/* <TableCell align="center">
-                            <Box 
-                              className="action-buttons"
-                              sx={{ 
-                                opacity: { xs: 1, md: 0.5 },
-                                transition: 'opacity 0.2s',
-                                display: 'flex',
-                                justifyContent: 'center',
-                                gap: 1
-                              }}
-                            >
-                              <IconButton
-                                onClick={() => handleDelete(
-                                  row.id_pemasukan || row.id_pengeluaran,
-                                  row.pemasukan > 0 ? 'pemasukan' : 'pengeluaran'
-                                )}
-                                color="error"
-                                sx={{ 
-                                  width: { xs: '35px', md: '30px' },
-                                  height: { xs: '35px', md: '30px' }
-                                }}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            </Box>
-                          </TableCell> */}
                         </TableRow>
                       ))
                     )}
@@ -720,6 +694,15 @@ export default function LaporanKeuangan() {
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
                       {row.tanggal}
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="caption" color="textSecondary">
+                      Kategori
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      {row.kategori}
                     </Typography>
                   </Box>
 

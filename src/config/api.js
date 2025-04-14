@@ -10,7 +10,7 @@ export const API_ENDPOINTS = {
     ADMIN_BY_NIK: (nik) => `${API_BASE_URL}/admin/${nik}`,
     
     // Pemasukan endpoints
-    PEMASUKAN_ADD: `${API_BASE_URL}/pemasukan/add`,
+    PEMASUKAN_ADD: `${API_BASE_URL}z`,
     PEMASUKAN_UPDATE: (id) => `${API_BASE_URL}/pemasukan/update/${id}`,
     PEMASUKAN_GET_ALL: `${API_BASE_URL}/pemasukan/getall`,
     PEMASUKAN_GET_BY_ID: (id) => `${API_BASE_URL}/pemasukan/get/${id}`,

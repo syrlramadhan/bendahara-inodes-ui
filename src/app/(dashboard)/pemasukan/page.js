@@ -8,7 +8,6 @@ import {
   TableContainer, 
   TableHead, 
   TableRow, 
-  Paper,
   Button,
   Dialog,
   DialogTitle,
@@ -335,7 +334,6 @@ export default function Pemasukan() {
                 <TableRow>
                   <TableCell>No</TableCell>
                   <TableCell>Tanggal</TableCell>
-                  <TableCell>Kategori</TableCell>
                   <TableCell>Jumlah</TableCell>
                   <TableCell>Keterangan</TableCell>
                   <TableCell align="center">Aksi</TableCell>
@@ -372,7 +370,6 @@ export default function Pemasukan() {
                     >
                       <TableCell>{index + 1}</TableCell>
                       <TableCell>{row.tanggal}</TableCell>
-                      <TableCell>{row.kategori}</TableCell>
                       <TableCell sx={{ 
                         color: '#2e7d32', 
                         fontWeight: 600,
