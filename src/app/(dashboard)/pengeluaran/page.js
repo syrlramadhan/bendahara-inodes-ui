@@ -36,6 +36,7 @@ import ReceiptIcon from '@mui/icons-material/Receipt'
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
 import { styled } from '@mui/material/styles'
 import { pengeluaranService } from '@/services/pengeluaranService'
+import { laporanService } from '@/services/laporanService'
 import { UPLOAD_URL } from '@/config/api'
 
 // Styled components
@@ -118,7 +119,9 @@ export default function Pengeluaran() {
   const [alertType, setAlertType] = useState('success')
   const [loading, setLoading] = useState(true)
   const [previewUrl, setPreviewUrl] = useState('')
-  
+  const [totalPengeluaran, setTotalPengeluaran] = useState(0)
+  const [isLoadingTotal, setIsLoadingTotal] = useState(true)
+
   // State untuk pagination
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
@@ -127,14 +130,39 @@ export default function Pengeluaran() {
 
   useEffect(() => {
     fetchData()
-  }, [page, rowsPerPage]) // Tambahkan dependency page dan rowsPerPage
+  }, [page, rowsPerPage])
+
+  useEffect(() => {
+    const fetchTotal = async () => {
+      try {
+        setIsLoadingTotal(true)
+        const total = await laporanService.getTotalPengeluaran()
+        console.log('Fetched Total Pengeluaran:', total)
+        setTotalPengeluaran(Number.isFinite(total) ? total : 0)
+      } catch (error) {
+        console.error('Gagal mengambil total pengeluaran:', error)
+        setTotalPengeluaran(0)
+        showAlertMessage('Gagal memuat total pengeluaran', 'error')
+      } finally {
+        setIsLoadingTotal(false)
+      }
+    }
+    fetchTotal()
+  }, [])
+
+  // Cleanup previewUrl untuk mencegah memory leak
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
 
   const fetchData = async () => {
     try {
       setLoading(true)
       const response = await pengeluaranService.getAllPengeluaran(page + 1, rowsPerPage)
-
-      // Transform data dari API ke format yang diharapkan komponen
       const pengeluaranData = response.data.items.map(item => ({
         id: item.id_pengeluaran,
         tanggal: item.tanggal,
@@ -142,13 +170,13 @@ export default function Pengeluaran() {
         keterangan: item.keterangan,
         nota: item.nota
       }))
-      
       setRows(pengeluaranData)
       setTotalItems(response.data.total_items)
       setTotalPages(response.data.total_pages)
     } catch (error) {
       console.error('Error fetching data:', error)
       showAlertMessage('Gagal mengambil data: ' + error.message, 'error')
+      setRows([])
     } finally {
       setLoading(false)
     }
@@ -157,21 +185,26 @@ export default function Pengeluaran() {
   const handleInputChange = (e) => {
     const { name, value, files } = e.target
     if (name === 'nota') {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
       const file = files[0]
       setFormData(prev => ({
         ...prev,
         [name]: file
       }))
-      // Buat preview URL untuk gambar
       if (file) {
         const url = URL.createObjectURL(file)
         setPreviewUrl(url)
+      } else {
+        setPreviewUrl('')
       }
     } else if (name === 'nominal') {
-      console.log('Input nominal value:', value)
-      // Hapus semua karakter non-digit
       const numericValue = value.replace(/\D/g, '')
-      console.log('Numeric value:', numericValue)
+      if (numericValue.length > 11) {
+        showAlertMessage('Nominal terlalu besar (maksimal puluhan milyar)', 'error')
+        return
+      }
       setFormData(prev => ({
         ...prev,
         [name]: numericValue
@@ -182,7 +215,7 @@ export default function Pengeluaran() {
         [name]: value
       }))
     }
-  };
+  }
 
   const handleAdd = () => {
     setEditingId(null)
@@ -197,15 +230,16 @@ export default function Pengeluaran() {
   }
 
   const handleEdit = (row) => {
-    console.log('Editing row:', row);
-    setEditingId(row.id) // Menggunakan id dari data yang diterima
+    const [datePart, timePart] = row.tanggal.split(' ')
+    const [year, month, day] = datePart.split('-')
+    const localDateTime = `${year}-${month}-${day}T${timePart}`
+    setEditingId(row.id)
     setFormData({
-      tanggal: row.tanggal,
+      tanggal: localDateTime,
       nominal: row.nominal.toString(),
       keterangan: row.keterangan,
       nota: null
     })
-    // Set preview URL jika ada nota
     if (row.nota) {
       setPreviewUrl(`${UPLOAD_URL}${row.nota}`)
     } else {
@@ -216,34 +250,29 @@ export default function Pengeluaran() {
 
   const handleDelete = async (id) => {
     if (!id) {
-      console.log('Invalid data:', { id });
-      showAlertMessage('Data tidak valid untuk dihapus (No/ID tidak ditemukan)', 'error');
-      return;
+      showAlertMessage('Data tidak valid untuk dihapus', 'error')
+      return
     }
-
-    // Konfirmasi penghapusan
     if (!window.confirm(`Apakah Anda yakin ingin menghapus pengeluaran dengan No ${id}?`)) {
-      return;
+      return
     }
-
     try {
-      setLoading(true);
-      await pengeluaranService.deletePengeluaran(id, 'pengeluaran');
-
-      // Jika menghapus item terakhir di halaman, kembali ke halaman sebelumnya
+      setLoading(true)
+      await pengeluaranService.deletePengeluaran(id)
       if (rows.length === 1 && page > 0) {
-        setPage(page - 1);
+        setPage(page - 1)
       } else {
-        // Refresh data setelah menghapus
-        await fetchData();
+        await fetchData()
       }
-
-      showAlertMessage(`Pengeluaran dengan No ${id} berhasil dihapus`, 'success');
+      // Refresh total pengeluaran
+      const total = await laporanService.getTotalPengeluaran()
+      setTotalPengeluaran(Number.isFinite(total) ? total : 0)
+      showAlertMessage(`Pengeluaran dengan No ${id} berhasil dihapus`, 'success')
     } catch (error) {
-      console.error('Error deleting data:', error);
-      showAlertMessage(`Gagal menghapus pengeluaran: ${error.message}`, 'error');
+      console.error('Error deleting data:', error)
+      showAlertMessage(`Gagal menghapus pengeluaran: ${error.message}`, 'error')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
@@ -256,55 +285,69 @@ export default function Pengeluaran() {
 
   const handleSave = async () => {
     try {
-      setLoading(true);
+      setLoading(true)
+      // Validasi input
+      if (!formData.tanggal) throw new Error('Tanggal harus diisi')
+      if (!formData.nominal) throw new Error('Nominal harus diisi')
+      if (!formData.keterangan) throw new Error('Keterangan harus diisi')
+      if (!editingId && !formData.nota) throw new Error('Nota harus diupload')
 
-      // Konversi format tanggal dari datetime-local (YYYY-MM-DDTHH:mm) ke YYYY-MM-DD HH:mm
-      const dateObj = new Date(formData.tanggal);
-      const formattedDate = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')} ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
+      const dateObj = new Date(formData.tanggal)
+      if (isNaN(dateObj.getTime())) throw new Error('Format tanggal tidak valid')
+
+      const day = String(dateObj.getDate()).padStart(2, '0')
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+      const year = dateObj.getFullYear()
+      const hours = String(dateObj.getHours()).padStart(2, '0')
+      const minutes = String(dateObj.getMinutes()).padStart(2, '0')
+      const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}`
 
       const dataToSend = {
-        tanggal: formattedDate, // Format: "YYYY-MM-DD HH:mm"
+        tanggal: formattedDate,
         nominal: parseFloat(formData.nominal),
         keterangan: formData.keterangan.trim(),
         nota: formData.nota
-      };
-
-      let result;
-      if (editingId) {
-        result = await pengeluaranService.updatePengeluaran(editingId, dataToSend);
-      } else {
-        result = await pengeluaranService.addPengeluaran(dataToSend);
       }
 
-      showAlertMessage(result.message, 'success');
-      setShowModal(false);
-      await fetchData();
+      let result
+      if (editingId) {
+        // Tidak kirim nota saat update kecuali ada file baru
+        const { nota, ...updateData } = dataToSend
+        result = await pengeluaranService.updatePengeluaran(editingId, formData.nota ? dataToSend : updateData)
+      } else {
+        result = await pengeluaranService.addPengeluaran(dataToSend)
+      }
+
+      showAlertMessage(result.message, 'success')
+      setShowModal(false)
+      await fetchData()
+      // Refresh total pengeluaran
+      const total = await laporanService.getTotalPengeluaran()
+      setTotalPengeluaran(Number.isFinite(total) ? total : 0)
     } catch (error) {
-      console.error('Error saving data:', error);
-      showAlertMessage(error.message || 'Gagal menyimpan data', 'error');
+      console.error('Error saving data:', error)
+      showAlertMessage(error.message || 'Gagal menyimpan data', 'error')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const formatCurrency = (amount) => {
+    const validAmount = Number.isFinite(Number(amount)) ? Number(amount) : 0
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(amount)
+    }).format(validAmount)
   }
 
   const formatDateTime = (dateTimeString) => {
     if (!dateTimeString) return '-'
-
     try {
-      // Handle format "DD-MM-YYYY HH:mm" dari API
       const [datePart, timePart] = dateTimeString.split(' ')
-      const [day, month, year] = datePart.split('-')
+      const [year, month, day] = datePart.split('-')
       const [hours, minutes] = timePart.split(':')
-
       return `${day}/${month}/${year} ${hours}:${minutes}`
     } catch (e) {
       console.error('Error formatting date:', e)
@@ -312,18 +355,14 @@ export default function Pengeluaran() {
     }
   }
 
-  // Handler untuk perubahan halaman
   const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
+    setPage(newPage)
+  }
 
-  // Handler untuk perubahan jumlah baris per halaman
   const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0); // Reset ke halaman pertama ketika mengubah jumlah baris per halaman
-  };
-
-  const totalPengeluaran = rows.reduce((sum, row) => sum + (row.nominal || 0), 0)
+    setRowsPerPage(parseInt(event.target.value, 10))
+    setPage(0)
+  }
 
   const handleClose = () => {
     setShowModal(false)
@@ -357,7 +396,7 @@ export default function Pengeluaran() {
             Data Pengeluaran
           </Typography>
           <Typography variant="subtitle1" sx={{ opacity: 0.8 }}>
-            Total Pengeluaran: {formatCurrency(totalPengeluaran)}
+            Total Pengeluaran: {isLoadingTotal ? 'Memuat...' : formatCurrency(totalPengeluaran)}
           </Typography>
         </Box>
         <DesktopAddButton
@@ -413,7 +452,7 @@ export default function Pengeluaran() {
                 ) : (
                   rows.map((row, index) => (
                     <TableRow
-                      key={row.id} // Gunakan id sebagai key unik
+                      key={row.id}
                       sx={{
                         '&:hover': {
                           backgroundColor: '#f5f5f5'
@@ -682,7 +721,7 @@ export default function Pengeluaran() {
               }}
             >
               <ReceiptIcon sx={{ fontSize: 20 }} />
-              Upload Nota *
+              Upload Nota {editingId ? '(Opsional)' : '*'}
             </Typography>
             <Box
               sx={{
@@ -706,6 +745,7 @@ export default function Pengeluaran() {
                 onChange={handleInputChange}
                 style={{ display: 'none' }}
                 id="nota-upload"
+                aria-label="Upload nota pengeluaran"
               />
               <label htmlFor="nota-upload" style={{ cursor: 'pointer' }}>
                 {previewUrl ? (

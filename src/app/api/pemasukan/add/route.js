@@ -29,14 +29,14 @@ export async function POST(request) {
       );
     }
 
-    // 3. Validate Authorization
-    const token = request.headers.get('Authorization');
-    if (!token || !token.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, message: 'Authorization token required' },
-        { status: 401, headers: CORS_HEADERS }
-      );
-    }
+    // // 3. Validate Authorization
+    // const token = request.headers.get('Authorization');
+    // if (!token || !token.startsWith('Bearer ')) {
+    //   return NextResponse.json(
+    //     { success: false, message: 'Authorization token required' },
+    //     { status: 401, headers: CORS_HEADERS }
+    //   );
+    // }
 
     // 4. Validate required fields
     const requiredFields = ['tanggal', 'nominal', 'keterangan', 'kategori'];
@@ -92,7 +92,7 @@ export async function POST(request) {
     const backendResponse = await fetch(API_ENDPOINTS.PEMASUKAN_ADD, {
       method: 'POST',
       headers: {
-        'Authorization': token,
+        // 'Authorization': token,
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },

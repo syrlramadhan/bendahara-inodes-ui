@@ -26,11 +26,11 @@ import {
   CardContent,
   Select,
   FormControl,
-  InputLabel
+  InputLabel,
+  Alert
 } from '@mui/material'
 import {
   FileDownload as FileDownloadIcon,
-  Print as PrintIcon,
   PictureAsPdf as PdfIcon,
   TableView as ExcelIcon,
   TrendingUp as TrendingUpIcon,
@@ -38,14 +38,12 @@ import {
   AccountBalance as AccountBalanceIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material'
-import { colors } from '@/styles/colors'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import { laporanService } from '@/services/laporanService'
 import { pemasukanService } from '@/services/pemasukanService'
 import { pengeluaranService } from '@/services/pengeluaranService'
-import { transaksiService } from '@/services/transaksiService'
 
 // Animasi dan styled components
 const slideUp = keyframes`
@@ -213,31 +211,77 @@ export default function LaporanKeuangan() {
   const [filteredData, setFilteredData] = useState([])
   const [timeRange, setTimeRange] = useState('all')
   const [loading, setLoading] = useState(true)
+  const [isLoadingSummary, setIsLoadingSummary] = useState(true)
   const [error, setError] = useState(null)
   const [anchorEl, setAnchorEl] = useState(null)
-  const open = Boolean(anchorEl)
-  const [refreshKey, setRefreshKey] = useState(0)
+  const [totalPemasukan, setTotalPemasukan] = useState(0)
+  const [totalPengeluaran, setTotalPengeluaran] = useState(0)
+  const [saldoAkhir, setSaldoAkhir] = useState(0)
   const [alert, setAlert] = useState({ open: false, message: '', severity: 'success' })
+  const open = Boolean(anchorEl)
 
-  // Format tanggal ke YYYY-MM-DD
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        setIsLoadingSummary(true)
+        const [pemasukan, pengeluaran, saldo] = await Promise.all([
+          laporanService.getTotalPemasukan(),
+          laporanService.getTotalPengeluaran(),
+          laporanService.getSaldo()
+        ])
+        setTotalPemasukan(Number.isFinite(pemasukan) ? pemasukan : 0)
+        setTotalPengeluaran(Number.isFinite(pengeluaran) ? pengeluaran : 0)
+        setSaldoAkhir(Number.isFinite(saldo) ? saldo : 0)
+      } catch (error) {
+        console.error('Error fetching summary:', error)
+        setAlert({
+          open: true,
+          message: 'Gagal memuat ringkasan keuangan',
+          severity: 'error'
+        })
+        setTotalPemasukan(0)
+        setTotalPengeluaran(0)
+        setSaldoAkhir(0)
+      } finally {
+        setIsLoadingSummary(false)
+      }
+    }
+    fetchSummary()
+  }, [])
+
   const formatDate = (date) => {
     if (!date) return null
     const d = new Date(date)
-    // Pastikan tidak ada masalah timezone
     const year = d.getFullYear()
     const month = String(d.getMonth() + 1).padStart(2, '0')
     const day = String(d.getDate()).padStart(2, '0')
     return `${year}-${month}-${day}`
   }
 
-  // Fungsi untuk menghitung rentang tanggal berdasarkan filter
+  const formatDateTime = (backendDateString) => {
+    if (!backendDateString) return '-'
+    try {
+      const [datePart, timePart] = backendDateString.split(' ')
+      const [day, month, year] = datePart.split('-')
+      const [hours, minutes] = timePart.split(':')
+      return new Date(year, month - 1, day, hours, minutes).toLocaleString('id-ID', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    } catch (e) {
+      console.error('Error formatting date:', e)
+      return backendDateString
+    }
+  }
+
   const getDateRange = (range) => {
     const today = new Date()
-    today.setHours(0, 0, 0, 0) // Set ke awal hari
-
+    today.setHours(0, 0, 0, 0)
     const startDate = new Date()
-    startDate.setHours(0, 0, 0, 0) // Set ke awal hari
-
+    startDate.setHours(0, 0, 0, 0)
     switch (range) {
       case 'today':
         return { start: today, end: today }
@@ -265,43 +309,35 @@ export default function LaporanKeuangan() {
     }
   }
 
-  // Fungsi untuk mengambil data berdasarkan rentang waktu
   const fetchDataByRange = async (range) => {
     try {
       setLoading(true)
       const { start, end } = getDateRange(range)
-
+      let rangeData
       if (!start || !end) {
-        // Jika tidak ada rentang (all time), ambil semua data
-        const allData = await laporanService.getAllLaporan()
-        setData(allData || []) // Pastikan array
-        setFilteredData(allData || []) // Pastikan array
-        return
+        rangeData = await laporanService.getAllLaporan()
+      } else {
+        const startDate = formatDate(start)
+        const endDate = formatDate(end)
+        rangeData = await laporanService.getLaporanByDateRange(startDate, endDate)
       }
-
-      // Format tanggal untuk API
-      const startDate = formatDate(start)
-      const endDate = formatDate(end)
-
-      // Ambil data dari endpoint range
-      const rangeData = await laporanService.getLaporanByDateRange(startDate, endDate)
-      setData(rangeData || []) // Pastikan array
-      setFilteredData(rangeData || []) // Pastikan array
+      setData(rangeData)
+      setFilteredData(rangeData)
     } catch (error) {
       console.error('Error fetching data:', error)
       setError('Gagal mengambil data laporan: ' + error.message)
-      setFilteredData([]) // Set ke array kosong jika error
+      setData([])
+      setFilteredData([])
+      setAlert({
+        open: true,
+        message: 'Gagal memuat data laporan',
+        severity: 'error'
+      })
     } finally {
       setLoading(false)
     }
   }
 
-  // Efek untuk memuat data awal
-  useEffect(() => {
-    fetchDataByRange(timeRange)
-  }, [refreshKey])
-
-  // Efek untuk memfilter data saat timeRange berubah
   useEffect(() => {
     fetchDataByRange(timeRange)
   }, [timeRange])
@@ -315,41 +351,34 @@ export default function LaporanKeuangan() {
   }
 
   const formatRupiah = (number) => {
+    const validNumber = Number.isFinite(Number(number)) ? Number(number) : 0
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(number)
+    }).format(validNumber)
   }
 
   const generatePDF = () => {
     try {
       const doc = new jsPDF('l', 'mm', 'a4')
-
       doc.setFontSize(16)
       doc.text('Laporan Keuangan Desa', 14, 15)
       doc.setFontSize(12)
-
-      // Dapatkan label periode berdasarkan timeRange
       const periodLabel = timeRangeOptions.find(opt => opt.value === timeRange)?.label || 'Semua'
       doc.text(`Periode: ${periodLabel}`, 14, 25)
-
-      doc.setFontSize(12)
       doc.text(`Total Pemasukan: ${formatRupiah(totalPemasukan)}`, 14, 35)
       doc.text(`Total Pengeluaran: ${formatRupiah(totalPengeluaran)}`, 14, 42)
       doc.text(`Saldo Akhir: ${formatRupiah(saldoAkhir)}`, 14, 49)
-
       const tableData = filteredData.map(row => [
-        row.tanggal,
+        formatDateTime(row.tanggal),
         row.keterangan,
         formatRupiah(row.pemasukan || 0),
         formatRupiah(row.pengeluaran || 0),
         formatRupiah(row.total_saldo || 0)
       ])
-
       const tableColumns = ['Tanggal', 'Keterangan', 'Pemasukan', 'Pengeluaran', 'Saldo']
-
       autoTable(doc, {
         head: [tableColumns],
         body: tableData,
@@ -372,7 +401,6 @@ export default function LaporanKeuangan() {
           fontStyle: 'bold'
         }
       })
-
       doc.save('laporan-keuangan.pdf')
       handleClose()
     } catch (error) {
@@ -386,31 +414,34 @@ export default function LaporanKeuangan() {
   }
 
   const exportToExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(filteredData.map(row => ({
-      Tanggal: row.tanggal,
-      Keterangan: row.keterangan,
-      Pemasukan: row.pemasukan,
-      Pengeluaran: row.pengeluaran,
-      Saldo: row.total_saldo
-    })))
-
-    const colWidths = [
-      { wch: 12 },
-      { wch: 30 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 15 }
-    ]
-    ws['!cols'] = colWidths
-
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Laporan Keuangan')
-    XLSX.writeFile(wb, 'laporan-keuangan.xlsx')
-    handleClose()
-  }
-
-  const refreshData = () => {
-    setRefreshKey(oldKey => oldKey + 1)
+    try {
+      const ws = XLSX.utils.json_to_sheet(filteredData.map(row => ({
+        Tanggal: formatDateTime(row.tanggal),
+        Keterangan: row.keterangan,
+        Pemasukan: row.pemasukan || 0,
+        Pengeluaran: row.pengeluaran || 0,
+        Saldo: row.total_saldo || 0
+      })))
+      const colWidths = [
+        { wch: 12 },
+        { wch: 30 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 }
+      ]
+      ws['!cols'] = colWidths
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Laporan Keuangan')
+      XLSX.writeFile(wb, 'laporan-keuangan.xlsx')
+      handleClose()
+    } catch (error) {
+      console.error('Error exporting Excel:', error)
+      setAlert({
+        open: true,
+        message: 'Terjadi kesalahan saat membuat Excel',
+        severity: 'error'
+      })
+    }
   }
 
   const handleDelete = async (id, jenis) => {
@@ -422,14 +453,11 @@ export default function LaporanKeuangan() {
       })
       return
     }
-
     if (!window.confirm(`Apakah Anda yakin ingin menghapus ${jenis} ini?`)) {
       return
     }
-
     try {
       setLoading(true)
-
       if (jenis === 'pemasukan') {
         await pemasukanService.deletePemasukan(id)
       } else if (jenis === 'pengeluaran') {
@@ -437,10 +465,7 @@ export default function LaporanKeuangan() {
       } else {
         throw new Error('Jenis transaksi tidak valid')
       }
-
-      // Refresh data setelah menghapus
       await fetchDataByRange(timeRange)
-
       setAlert({
         open: true,
         message: 'Data berhasil dihapus',
@@ -458,11 +483,6 @@ export default function LaporanKeuangan() {
     }
   }
 
-  // Hitung total pemasukan, pengeluaran, dan saldo akhir
-  const totalPemasukan = (filteredData || []).reduce((sum, item) => sum + (item.pemasukan || 0), 0)
-  const totalPengeluaran = (filteredData || []).reduce((sum, item) => sum + (item.pengeluaran || 0), 0)
-  const saldoAkhir = (filteredData && filteredData.length > 0) ? filteredData[filteredData.length - 1].total_saldo : 0
-  // Opsi untuk dropdown filter
   const timeRangeOptions = [
     { value: 'today', label: 'Hari Ini' },
     { value: 'yesterday', label: 'Kemarin' },
@@ -482,7 +502,24 @@ export default function LaporanKeuangan() {
       borderRadius: '16px',
       padding: '24px'
     }}>
-      {loading ? (
+      <Fade in={alert.open}>
+        <Alert
+          severity={alert.severity}
+          sx={{
+            position: 'fixed',
+            top: 24,
+            right: 24,
+            zIndex: 9999,
+            boxShadow: '0 4px 20px 0 rgba(0,0,0,0.1)',
+            borderRadius: '12px'
+          }}
+          onClose={() => setAlert({ ...alert, open: false })}
+        >
+          {alert.message}
+        </Alert>
+      </Fade>
+
+      {loading && isLoadingSummary ? (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
@@ -492,7 +529,6 @@ export default function LaporanKeuangan() {
         </Box>
       ) : (
         <div>
-          {/* Header Section */}
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} sx={{
             flexDirection: { xs: 'column', sm: 'row' },
             gap: { xs: 2, sm: 0 }
@@ -536,7 +572,7 @@ export default function LaporanKeuangan() {
               </StyledFormControl>
               <Button
                 variant="outlined"
-                onClick={refreshData}
+                onClick={() => fetchDataByRange(timeRange)}
                 fullWidth={false}
                 sx={{
                   borderRadius: '12px',
@@ -559,7 +595,6 @@ export default function LaporanKeuangan() {
             </Box>
           </Box>
 
-          {/* Summary Cards */}
           <Grid container spacing={3} mb={4}>
             <Grid item xs={12} sm={4}>
               <StyledCard variant="income" delay={0.2} sx={{
@@ -584,7 +619,7 @@ export default function LaporanKeuangan() {
                   zIndex: 1,
                   fontSize: { xs: '1.5rem', sm: '2rem' }
                 }}>
-                  {formatRupiah(totalPemasukan)}
+                  {isLoadingSummary ? 'Memuat...' : formatRupiah(totalPemasukan)}
                 </Typography>
               </StyledCard>
             </Grid>
@@ -611,7 +646,7 @@ export default function LaporanKeuangan() {
                   zIndex: 1,
                   fontSize: { xs: '1.5rem', sm: '2rem' }
                 }}>
-                  {formatRupiah(totalPengeluaran)}
+                  {isLoadingSummary ? 'Memuat...' : formatRupiah(totalPengeluaran)}
                 </Typography>
               </StyledCard>
             </Grid>
@@ -638,13 +673,12 @@ export default function LaporanKeuangan() {
                   zIndex: 1,
                   fontSize: { xs: '1.5rem', sm: '2rem' }
                 }}>
-                  {formatRupiah(saldoAkhir)}
+                  {isLoadingSummary ? 'Memuat...' : formatRupiah(saldoAkhir)}
                 </Typography>
               </StyledCard>
             </Grid>
           </Grid>
 
-          {/* Export Menu */}
           <Menu
             anchorEl={anchorEl}
             open={open}
@@ -665,7 +699,6 @@ export default function LaporanKeuangan() {
             </MenuItem>
           </Menu>
 
-          {/* Desktop Table View */}
           <StyledCard sx={{
             p: 0,
             background: 'white',
@@ -712,7 +745,7 @@ export default function LaporanKeuangan() {
                     ) : (
                       filteredData.map((row, index) => (
                         <TableRow
-                          key={index}
+                          key={row.id_pemasukan || row.id_pengeluaran || index}
                           sx={{
                             '&:hover': {
                               bgcolor: '#f8f9fa',
@@ -722,7 +755,7 @@ export default function LaporanKeuangan() {
                             }
                           }}
                         >
-                          <TableCell>{row.tanggal}</TableCell>
+                          <TableCell>{formatDateTime(row.tanggal)}</TableCell>
                           <TableCell sx={{
                             maxWidth: { md: '300px' },
                             overflow: 'hidden',
@@ -776,11 +809,10 @@ export default function LaporanKeuangan() {
             </Box>
           </StyledCard>
 
-          {/* Mobile Card View */}
           <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
             {filteredData.map((row, index) => (
               <Card
-                key={index}
+                key={row.id_pemasukan || row.id_pengeluaran || index}
                 sx={{
                   borderRadius: '16px',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
@@ -794,10 +826,9 @@ export default function LaporanKeuangan() {
                       Tanggal
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {row.tanggal}
+                      {formatDateTime(row.tanggal)}
                     </Typography>
                   </Box>
-
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="caption" color="textSecondary">
                       Keterangan
@@ -806,7 +837,6 @@ export default function LaporanKeuangan() {
                       {row.keterangan}
                     </Typography>
                   </Box>
-
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="caption" color="textSecondary">
                       Nominal
@@ -824,7 +854,6 @@ export default function LaporanKeuangan() {
                       }
                     </Typography>
                   </Box>
-
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="caption" color="textSecondary">
                       Saldo
@@ -833,7 +862,6 @@ export default function LaporanKeuangan() {
                       {formatRupiah(row.total_saldo)}
                     </Typography>
                   </Box>
-
                   <Box sx={{
                     display: 'flex',
                     justifyContent: 'flex-end',
@@ -880,7 +908,6 @@ export default function LaporanKeuangan() {
             )}
           </Box>
 
-          {/* Mobile Info Message */}
           <Box sx={{
             display: { xs: 'block', md: 'none' },
             mt: 2,

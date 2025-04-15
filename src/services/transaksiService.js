@@ -8,15 +8,15 @@ export const transaksiService = {
      */
     getAllTransaksi: async () => {
         try {
-            const token = Cookies.get('authToken');
-            if (!token) {
-                throw new Error('Token tidak ditemukan');
-            }
+            // const token = Cookies.get('authToken');
+            // if (!token) {
+            //     throw new Error('Token tidak ditemukan');
+            // }
 
             const response = await fetch('/api/transaksi/getall', {
                 method: 'GET',
                 headers: {
-                    ...getHeaders(token),
+                    // ...getHeaders(token),
                     'ngrok-skip-browser-warning': 'true'
                 },
                 credentials: 'include'
@@ -41,15 +41,15 @@ export const transaksiService = {
      */
     getLastTransaksi: async () => {
         try {
-            const token = Cookies.get('authToken');
-            if (!token) {
-                throw new Error('Token tidak ditemukan');
-            }
+            // const token = Cookies.get('authToken');
+            // if (!token) {
+            //     throw new Error('Token tidak ditemukan');
+            // }
 
             const response = await fetch('/api/transaksi/getlast', {
                 method: 'GET',
                 headers: {
-                    ...getHeaders(token),
+                    // ...getHeaders(token),
                     'ngrok-skip-browser-warning': 'true'
                 },
                 credentials: 'include'

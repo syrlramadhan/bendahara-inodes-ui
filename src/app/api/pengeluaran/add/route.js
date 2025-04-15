@@ -4,14 +4,14 @@ import { API_ENDPOINTS } from '@/config/api';
 export async function POST(request) {
     try {
         const formData = await request.formData();
-        const token = request.headers.get('Authorization');
+        // const token = request.headers.get('Authorization');
 
-        if (!token) {
-            return NextResponse.json({
-                success: false,
-                message: 'Token tidak ditemukan'
-            }, { status: 401 });
-        }
+        // if (!token) {
+        //     return NextResponse.json({
+        //         success: false,
+        //         message: 'Token tidak ditemukan'
+        //     }, { status: 401 });
+        // }
 
         // Pastikan ada file nota
         const nota = formData.get('nota');
@@ -50,9 +50,6 @@ export async function POST(request) {
         // Forward request ke backend API
         const response = await fetch(API_ENDPOINTS.PENGELUARAN_ADD, {
             method: 'POST',
-            headers: {
-                'Authorization': token
-            },
             body: newFormData
         });
 

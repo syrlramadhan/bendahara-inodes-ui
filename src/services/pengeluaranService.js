@@ -9,10 +9,10 @@ export const pengeluaranService = {
      */
     addPengeluaran: async (data) => {
         try {
-            const token = Cookies.get('authToken');
-            if (!token) {
-                throw new Error('Token tidak ditemukan');
-            }
+            // const token = Cookies.get('authToken');
+            // if (!token) {
+            //     throw new Error('Token tidak ditemukan');
+            // }
 
             // Convert date from datetime-local to backend format (YYYY-MM-DD HH:mm)
             const formatDateForBackend = (dateString) => {
@@ -57,7 +57,7 @@ export const pengeluaranService = {
             const response = await fetch('/api/pengeluaran/add', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
+                    // 'Authorization': `Bearer ${token}`,
                     'ngrok-skip-browser-warning': 'true'
                 },
                 body: formData,
@@ -93,10 +93,10 @@ export const pengeluaranService = {
      */
     updatePengeluaran: async (id, data) => {
         try {
-            const token = Cookies.get('authToken');
-            if (!token) {
-                throw new Error('Token tidak ditemukan');
-            }
+            // const token = Cookies.get('authToken');
+            // if (!token) {
+            //     throw new Error('Token tidak ditemukan');
+            // }
 
             if (!id) {
                 throw new Error('ID tidak valid');
@@ -131,7 +131,7 @@ export const pengeluaranService = {
             const response = await fetch(`/api/pengeluaran/update/${id}`, {
                 method: 'PUT',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
+                    // 'Authorization': `Bearer ${token}`,
                     'ngrok-skip-browser-warning': 'true'
                 },
                 body: formData,
@@ -158,10 +158,10 @@ export const pengeluaranService = {
      */
     deletePengeluaran: async (id) => {
         try {
-            const token = Cookies.get('authToken');
-            if (!token) {
-                throw new Error('Token tidak ditemukan');
-            }
+            // const token = Cookies.get('authToken');
+            // if (!token) {
+            //     throw new Error('Token tidak ditemukan');
+            // }
 
             if (!id) {
                 throw new Error('ID tidak valid');
@@ -170,7 +170,7 @@ export const pengeluaranService = {
             const response = await fetch(`/api/pengeluaran/delete/${id}`, {
                 method: 'DELETE',
                 headers: {
-                    ...getHeaders(token),
+                    // ...getHeaders(token),
                     'ngrok-skip-browser-warning': 'true'
                 },
                 credentials: 'include'
@@ -194,15 +194,15 @@ export const pengeluaranService = {
      */
     getAllPengeluaran: async (page = 1, pageSize = 10) => {
         try {
-            const token = Cookies.get('authToken');
-            if (!token) {
-                throw new Error('Token tidak ditemukan');
-            }
+            // const token = Cookies.get('authToken');
+            // if (!token) {
+            //     throw new Error('Token tidak ditemukan');
+            // }
 
             const response = await fetch(`/api/pengeluaran/getall?page=${page}&page_size=${pageSize}`, {
                 method: 'GET',
                 headers: {
-                    ...getHeaders(token),
+                    // ...getHeaders(token),
                     'ngrok-skip-browser-warning': 'true'
                 },
                 credentials: 'include'
@@ -227,10 +227,10 @@ export const pengeluaranService = {
      */
     getPengeluaranById: async (id) => {
         try {
-            const token = Cookies.get('authToken');
-            if (!token) {
-                throw new Error('Token tidak ditemukan');
-            }
+            // const token = Cookies.get('authToken');
+            // if (!token) {
+            //     throw new Error('Token tidak ditemukan');
+            // }
 
             if (!id) {
                 throw new Error('ID tidak valid');
@@ -239,7 +239,7 @@ export const pengeluaranService = {
             const response = await fetch(`/api/pengeluaran/get/${id}`, {
                 method: 'GET',
                 headers: {
-                    ...getHeaders(token),
+                    // ...getHeaders(token),
                     'ngrok-skip-browser-warning': 'true'
                 },
                 credentials: 'include'

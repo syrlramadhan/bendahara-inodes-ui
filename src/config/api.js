@@ -48,16 +48,16 @@ export const API_ENDPOINTS = {
     SUMBANGAN_DELETE: (id) => `${API_BASE_URL}/sumbangan/delete/${id}`,
 };
 
-export const getHeaders = (token = null) => {
-    const headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'ngrok-skip-browser-warning': 'true'
-    };
+// export const getHeaders = (token = null) => {
+//     const headers = {
+//         'Content-Type': 'application/json',
+//         'Accept': 'application/json',
+//         'ngrok-skip-browser-warning': 'true'
+//     };
 
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
+//     if (token) {
+//         headers['Authorization'] = `Bearer ${token}`;
+//     }
 
-    return headers;
-}; 
+//     return headers;
+// }; 

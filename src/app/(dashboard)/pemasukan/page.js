@@ -32,9 +32,10 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
+import SaveIcon from '@mui/icons-material/Save'
 import { styled } from '@mui/material/styles'
 import { pemasukanService } from '@/services/pemasukanService'
-import SaveIcon from '@mui/icons-material/Save'
+import { laporanService } from '@/services/laporanService'
 
 // Styled components
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -115,7 +116,9 @@ export default function Pemasukan() {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertType, setAlertType] = useState('success')
   const [loading, setLoading] = useState(true)
-  
+  const [totalPemasukan, setTotalPemasukan] = useState(0)
+  const [isLoadingTotal, setIsLoadingTotal] = useState(true)
+
   // State untuk pagination
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
@@ -124,14 +127,30 @@ export default function Pemasukan() {
 
   useEffect(() => {
     fetchData()
-  }, [page, rowsPerPage]) // Tambahkan dependency page dan rowsPerPage
+  }, [page, rowsPerPage])
+
+  useEffect(() => {
+    const fetchTotal = async () => {
+      try {
+        setIsLoadingTotal(true)
+        const total = await laporanService.getTotalPemasukan()
+        console.log('Fetched Total Pemasukan:', total)
+        setTotalPemasukan(Number.isFinite(total) ? total : 0)
+      } catch (error) {
+        console.error('Gagal mengambil total pemasukan:', error)
+        setTotalPemasukan(0)
+        showAlertMessage('Gagal memuat total pemasukan', 'error')
+      } finally {
+        setIsLoadingTotal(false)
+      }
+    }
+    fetchTotal()
+  }, [])
 
   const fetchData = async () => {
     try {
       setLoading(true)
       const response = await pemasukanService.getAllPemasukan(page + 1, rowsPerPage)
-      
-      // Transform data dari API ke format yang diharapkan komponen
       const pemasukanData = response.data.items.map(item => ({
         id: item.id_pemasukan,
         tanggal: item.tanggal,
@@ -139,43 +158,35 @@ export default function Pemasukan() {
         keterangan: item.keterangan,
         kategori: item.kategori
       }))
-      
       setRows(pemasukanData)
       setTotalItems(response.data.total_items)
       setTotalPages(response.data.total_pages)
     } catch (error) {
       console.error('Error fetching data:', error)
       showAlertMessage('Gagal mengambil data: ' + error.message, 'error')
+      setRows([])
     } finally {
       setLoading(false)
     }
   }
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-
+    const { name, value } = e.target
     if (name === 'nominal') {
-      // Hapus semua karakter non-digit
-      const numericValue = value.replace(/\D/g, '');
-
-      // Batasi maksimal 11 digit (puluhan milyar)
+      const numericValue = value.replace(/\D/g, '')
       if (numericValue.length > 11) {
-        showAlertMessage('Nominal terlalu besar (maksimal puluhan milyar)', 'error');
-        return;
+        showAlertMessage('Nominal terlalu besar (maksimal puluhan milyar)', 'error')
+        return
       }
-
-      // Format dengan separator ribuan
-      const formattedValue = numericValue === '' ? '' : parseInt(numericValue).toLocaleString('id-ID');
-
       setFormData(prev => ({
         ...prev,
-        [name]: numericValue // Simpan nilai numerik tanpa format
-      }));
+        [name]: numericValue
+      }))
     } else {
       setFormData(prev => ({
         ...prev,
         [name]: value
-      }));
+      }))
     }
   }
 
@@ -191,51 +202,44 @@ export default function Pemasukan() {
   }
 
   const handleEdit = (row) => {
-    // Konversi dari format backend "DD-MM-YYYY HH:mm" ke datetime-local "YYYY-MM-DDTHH:mm"
-    const [datePart, timePart] = row.tanggal.split(' ');
-    const [day, month, year] = datePart.split('-');
-    const localDateTime = `${year}-${month}-${day}T${timePart}`;
-  
-    setEditingId(row.id);
+    const [datePart, timePart] = row.tanggal.split(' ')
+    const [day, month, year] = datePart.split('-')
+    const localDateTime = `${year}-${month}-${day}T${timePart}`
+    setEditingId(row.id)
     setFormData({
       tanggal: localDateTime,
       nominal: row.nominal.toString(),
       keterangan: row.keterangan,
       kategori: row.kategori || ''
-    });
-    setShowModal(true);
-  };
+    })
+    setShowModal(true)
+  }
 
   const handleDelete = async (id) => {
     if (!id) {
-      console.log('Invalid data:', { id });
-      showAlertMessage('Data tidak valid untuk dihapus (No/ID tidak ditemukan)', 'error');
-      return;
+      showAlertMessage('Data tidak valid untuk dihapus', 'error')
+      return
     }
-
-    // Konfirmasi penghapusan
     if (!window.confirm(`Apakah Anda yakin ingin menghapus pemasukan dengan No ${id}?`)) {
-      return;
+      return
     }
-
     try {
-      setLoading(true);
-      await pemasukanService.deletePemasukan(id, 'pemasukan');
-
-      // Jika menghapus item terakhir di halaman, kembali ke halaman sebelumnya
+      setLoading(true)
+      await pemasukanService.deletePemasukan(id)
       if (rows.length === 1 && page > 0) {
-        setPage(page - 1);
+        setPage(page - 1)
       } else {
-        // Refresh data setelah menghapus
-        await fetchData();
+        await fetchData()
       }
-
-      showAlertMessage(`Pemasukan dengan No ${id} berhasil dihapus`, 'success');
+      // Refresh total pemasukan
+      const total = await laporanService.getTotalPemasukan()
+      setTotalPemasukan(Number.isFinite(total) ? total : 0)
+      showAlertMessage(`Pemasukan dengan No ${id} berhasil dihapus`, 'success')
     } catch (error) {
-      console.error('Error deleting data:', error);
-      showAlertMessage(`Gagal menghapus pemasukan: ${error.message}`, 'error');
+      console.error('Error deleting data:', error)
+      showAlertMessage(`Gagal menghapus pemasukan: ${error.message}`, 'error')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
@@ -248,79 +252,84 @@ export default function Pemasukan() {
 
   const handleSave = async () => {
     try {
-      setLoading(true);
+      setLoading(true)
+      // Validasi input
+      if (!formData.tanggal) throw new Error('Tanggal harus diisi')
+      if (!formData.nominal) throw new Error('Nominal harus diisi')
+      if (!formData.kategori) throw new Error('Kategori harus diisi')
 
-      // Konversi format tanggal dari datetime-local (YYYY-MM-DDTHH:mm) ke DD-MM-YYYY HH:mm
-      const dateObj = new Date(formData.tanggal);
-      const day = String(dateObj.getDate()).padStart(2, '0');
-      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-      const year = dateObj.getFullYear();
-      const hours = String(dateObj.getHours()).padStart(2, '0');
-      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-      
-      const formattedDate = `${day}-${month}-${year} ${hours}:${minutes}`;
+      const dateObj = new Date(formData.tanggal)
+      if (isNaN(dateObj.getTime())) throw new Error('Format tanggal tidak valid')
 
+      const day = String(dateObj.getDate()).padStart(2, '0')
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+      const year = dateObj.getFullYear()
+      const hours = String(dateObj.getHours()).padStart(2, '0')
+      const minutes = String(dateObj.getMinutes()).padStart(2, '0')
+      const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}`
       const dataToSend = {
-        tanggal: formattedDate, // Format: "DD-MM-YYYY HH:mm"
+        tanggal: formattedDate,
         nominal: parseFloat(formData.nominal),
         kategori: formData.kategori.trim(),
         keterangan: formData.keterangan.trim()
-      };
-
-      let result;
-      if (editingId) {
-        result = await pemasukanService.updatePemasukan(editingId, dataToSend);
-      } else {
-        result = await pemasukanService.addPemasukan(dataToSend);
       }
-
-      showAlertMessage(result.message, 'success');
-      setShowModal(false);
-      await fetchData();
+      let result
+      if (editingId) {
+        result = await pemasukanService.updatePemasukan(editingId, dataToSend)
+      } else {
+        result = await pemasukanService.addPemasukan(dataToSend)
+      }
+      showAlertMessage(result.message, 'success')
+      setShowModal(false)
+      await fetchData()
+      // Refresh total pemasukan
+      const total = await laporanService.getTotalPemasukan()
+      setTotalPemasukan(Number.isFinite(total) ? total : 0)
     } catch (error) {
-      console.error('Error saving data:', error);
-      showAlertMessage(error.message || 'Gagal menyimpan data', 'error');
+      console.error('Error saving data:', error)
+      showAlertMessage(error.message || 'Gagal menyimpan data', 'error')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const formatCurrency = (amount) => {
+    const validAmount = Number.isFinite(Number(amount)) ? Number(amount) : 0
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(amount)
+    }).format(validAmount)
   }
 
   const formatDateTime = (backendDateString) => {
-    // Asumsi input: "DD-MM-YYYY HH:mm"
-    const [datePart, timePart] = backendDateString.split(' ');
-    const [day, month, year] = datePart.split('-');
-    const [hours, minutes] = timePart.split(':');
-    
-    return new Date(year, month-1, day, hours, minutes).toLocaleString('id-ID', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+    if (!backendDateString) return '-'
+    try {
+      const [datePart, timePart] = backendDateString.split(' ')
+      const [day, month, year] = datePart.split('-')
+      const [hours, minutes] = timePart.split(':')
+      return new Date(year, month - 1, day, hours, minutes).toLocaleString('id-ID', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    } catch (e) {
+      console.error('Error formatting date:', e)
+      return backendDateString
+    }
+  }
 
-  // Handler untuk perubahan halaman
   const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
+    setPage(newPage)
+  }
 
-  // Handler untuk perubahan jumlah baris per halaman
   const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0); // Reset ke halaman pertama ketika mengubah jumlah baris per halaman
-  };
-
-  const totalPemasukan = rows.reduce((sum, row) => sum + (row.nominal || 0), 0)
+    setRowsPerPage(parseInt(event.target.value, 10))
+    setPage(0)
+  }
 
   return (
     <Box sx={{
@@ -349,7 +358,7 @@ export default function Pemasukan() {
             Data Pemasukan
           </Typography>
           <Typography variant="subtitle1" sx={{ opacity: 0.8 }}>
-            Total Pemasukan: {formatCurrency(totalPemasukan)}
+            Total Pemasukan: {isLoadingTotal ? 'Memuat...' : formatCurrency(totalPemasukan)}
           </Typography>
         </Box>
         <DesktopAddButton
@@ -405,7 +414,7 @@ export default function Pemasukan() {
                 ) : (
                   rows.map((row, index) => (
                     <TableRow
-                      key={`${row.tanggal}-${index}`}
+                      key={row.id}
                       sx={{
                         '&:hover': {
                           bgcolor: '#f8f9fa',
@@ -598,6 +607,9 @@ export default function Pemasukan() {
                 }
               }
             }}
+            inputProps={{
+              'aria-label': 'Tanggal dan waktu pemasukan'
+            }}
           />
 
           <TextField
@@ -634,6 +646,9 @@ export default function Pemasukan() {
               }
             }}
             placeholder="Contoh: 1.000.000"
+            inputProps={{
+              'aria-label': 'Jumlah pemasukan'
+            }}
           />
 
           <TextField
@@ -667,6 +682,9 @@ export default function Pemasukan() {
                 }
               }
             }}
+            inputProps={{
+              'aria-label': 'Kategori pemasukan'
+            }}
           >
             <MenuItem value="">Pilih Kategori</MenuItem>
             <MenuItem value="Pajak">Pajak</MenuItem>
@@ -697,6 +715,9 @@ export default function Pemasukan() {
                   borderWidth: '2px',
                 }
               }
+            }}
+            inputProps={{
+              'aria-label': 'Keterangan pemasukan'
             }}
           />
         </DialogContent>

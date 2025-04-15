@@ -9,8 +9,8 @@ export const pemasukanService = {
      */
     async addPemasukan(data) {
         try {
-            const token = Cookies.get('authToken');
-            if (!token) throw new Error('Token tidak ditemukan');
+            // const token = Cookies.get('authToken');
+            // if (!token) throw new Error('Token tidak ditemukan');
 
             // Convert date from datetime-local (YYYY-MM-DDTHH:mm) to backend format (YYYY-MM-DD HH:mm)
             const formatDateForBackend = (dateString) => {
@@ -36,7 +36,7 @@ export const pemasukanService = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
+                    // 'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify(payload),
             });
@@ -66,8 +66,8 @@ export const pemasukanService = {
      */
     async updatePemasukan(id, data) {
         try {
-            const token = Cookies.get('authToken');
-            if (!token) throw new Error('Token tidak ditemukan');
+            // const token = Cookies.get('authToken');
+            // if (!token) throw new Error('Token tidak ditemukan');
 
             const payload = {
                 tanggal: new Date(data.tanggal).toISOString(),
@@ -80,7 +80,7 @@ export const pemasukanService = {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
+                    // 'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify(payload),
             });
@@ -109,10 +109,10 @@ export const pemasukanService = {
      */
     deletePemasukan: async (id) => {
         try {
-            const token = Cookies.get('authToken');
-            if (!token) {
-                throw new Error('Token tidak ditemukan');
-            }
+            // const token = Cookies.get('authToken');
+            // if (!token) {
+            //     throw new Error('Token tidak ditemukan');
+            // }
 
             if (!id) {
                 throw new Error('ID tidak valid');
@@ -121,7 +121,7 @@ export const pemasukanService = {
             const response = await fetch(`/api/pemasukan/delete/${id}`, {
                 method: 'DELETE',
                 headers: {
-                    ...getHeaders(token),
+                    // ...getHeaders(token),
                     'ngrok-skip-browser-warning': 'true'
                 },
                 credentials: 'include'
@@ -145,15 +145,15 @@ export const pemasukanService = {
      */
     getAllPemasukan: async (page = 1, pageSize = 10) => {
         try {
-            const token = Cookies.get('authToken');
-            if (!token) {
-                throw new Error('Token tidak ditemukan');
-            }
+            // const token = Cookies.get('authToken');
+            // if (!token) {
+            //     throw new Error('Token tidak ditemukan');
+            // }
 
             const response = await fetch(`/api/pemasukan/getall?page=${page}&page_size=${pageSize}`, {
                 method: 'GET',
                 headers: {
-                    ...getHeaders(token),
+                    // ...getHeaders(token),
                     'ngrok-skip-browser-warning': 'true'
                 },
                 credentials: 'include'
@@ -178,10 +178,10 @@ export const pemasukanService = {
      */
     getPemasukanById: async (id) => {
         try {
-            const token = Cookies.get('authToken');
-            if (!token) {
-                throw new Error('Token tidak ditemukan');
-            }
+            // const token = Cookies.get('authToken');
+            // if (!token) {
+            //     throw new Error('Token tidak ditemukan');
+            // }
 
             if (!id) {
                 throw new Error('ID tidak valid');
@@ -190,7 +190,7 @@ export const pemasukanService = {
             const response = await fetch(`/api/pemasukan/get/${id}`, {
                 method: 'GET',
                 headers: {
-                    ...getHeaders(token),
+                    // ...getHeaders(token),
                     'ngrok-skip-browser-warning': 'true'
                 },
                 credentials: 'include'
