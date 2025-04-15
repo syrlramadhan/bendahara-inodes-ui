@@ -11,7 +11,7 @@ export const pemasukanService = {
         try {
             const token = Cookies.get('authToken');
             if (!token) throw new Error('Token tidak ditemukan');
-    
+
             // Convert date from datetime-local (YYYY-MM-DDTHH:mm) to backend format (YYYY-MM-DD HH:mm)
             const formatDateForBackend = (dateString) => {
                 const date = new Date(dateString);
@@ -20,10 +20,10 @@ export const pemasukanService = {
                 const day = String(date.getDate()).padStart(2, '0');
                 const hours = String(date.getHours()).padStart(2, '0');
                 const minutes = String(date.getMinutes()).padStart(2, '0');
-                
+
                 return `${year}-${month}-${day} ${hours}:${minutes}`;
             };
-    
+
             // Prepare payload with properly formatted date
             const payload = {
                 tanggal: formatDateForBackend(data.tanggal), // Formatted for backend
@@ -31,7 +31,7 @@ export const pemasukanService = {
                 kategori: data.kategori.trim(),
                 keterangan: data.keterangan.trim()
             };
-        
+
             const response = await fetch('/api/pemasukan/add', {
                 method: 'POST',
                 headers: {
@@ -40,13 +40,13 @@ export const pemasukanService = {
                 },
                 body: JSON.stringify(payload),
             });
-    
+
             const result = await response.json();
-    
+
             if (!response.ok) {
                 throw new Error(result.message || 'Gagal menambah pemasukan');
             }
-    
+
             return {
                 success: true,
                 data: result.data,
@@ -143,14 +143,14 @@ export const pemasukanService = {
      * Get all income records
      * @returns {Promise<Array>} Array of income records
      */
-    getAllPemasukan: async () => {
+    getAllPemasukan: async (page = 1, pageSize = 10) => {
         try {
             const token = Cookies.get('authToken');
             if (!token) {
                 throw new Error('Token tidak ditemukan');
             }
-    
-            const response = await fetch('/api/pemasukan/getall', {
+
+            const response = await fetch(`/api/pemasukan/getall?page=${page}&page_size=${pageSize}`, {
                 method: 'GET',
                 headers: {
                     ...getHeaders(token),
@@ -158,35 +158,13 @@ export const pemasukanService = {
                 },
                 credentials: 'include'
             });
-    
-            // Handle non-OK responses
+
             if (!response.ok) {
-                let errorMessage = 'Gagal mengambil data pemasukan';
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.message || errorMessage;
-                } catch (e) {
-                    console.error('Error parsing error response:', e);
-                }
-                throw new Error(errorMessage);
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Gagal mengambil data pemasukan');
             }
-    
-            // Parse response
-            const result = await response.json();
-            
-            // Validasi struktur response
-            if (!result) {
-                throw new Error('Response tidak valid');
-            }
-    
-            // Pastikan data adalah array
-            const responseData = Array.isArray(result.data) ? result.data : 
-                              Array.isArray(result) ? result : [];
-    
-            // Debugging log
-            console.log('Data pemasukan:', responseData);
-            
-            return responseData;
+
+            return await response.json(); // Kembalikan seluruh response termasuk metadata pagination
         } catch (error) {
             console.error('Error in getAllPemasukan:', error);
             throw error;

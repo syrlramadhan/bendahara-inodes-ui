@@ -25,7 +25,8 @@ import {
   Alert,
   Fade,
   CircularProgress,
-  MenuItem
+  MenuItem,
+  TablePagination
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -114,20 +115,37 @@ export default function Pemasukan() {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertType, setAlertType] = useState('success')
   const [loading, setLoading] = useState(true)
+  
+  // State untuk pagination
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [totalItems, setTotalItems] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [page, rowsPerPage]) // Tambahkan dependency page dan rowsPerPage
 
   const fetchData = async () => {
     try {
       setLoading(true)
-      const response = await pemasukanService.getAllPemasukan()
-      const pemasukanData = response.filter(item => item.nominal > 0)
+      const response = await pemasukanService.getAllPemasukan(page + 1, rowsPerPage)
+      
+      // Transform data dari API ke format yang diharapkan komponen
+      const pemasukanData = response.data.items.map(item => ({
+        id: item.id_pemasukan,
+        tanggal: item.tanggal,
+        nominal: item.nominal,
+        keterangan: item.keterangan,
+        kategori: item.kategori
+      }))
+      
       setRows(pemasukanData)
+      setTotalItems(response.data.total_items)
+      setTotalPages(response.data.total_pages)
     } catch (error) {
       console.error('Error fetching data:', error)
-      showAlertMessage('Gagal mengambil data', 'error')
+      showAlertMessage('Gagal mengambil data: ' + error.message, 'error')
     } finally {
       setLoading(false)
     }
@@ -173,9 +191,10 @@ export default function Pemasukan() {
   }
 
   const handleEdit = (row) => {
-    // Konversi dari format backend "YYYY-MM-DD HH:mm" ke datetime-local "YYYY-MM-DDTHH:mm"
-    const backendDate = row.tanggal; // Format dari backend: "2023-11-15 13:45"
-    const localDateTime = backendDate.replace(' ', 'T'); // Menjadi "2023-11-15T13:45"
+    // Konversi dari format backend "DD-MM-YYYY HH:mm" ke datetime-local "YYYY-MM-DDTHH:mm"
+    const [datePart, timePart] = row.tanggal.split(' ');
+    const [day, month, year] = datePart.split('-');
+    const localDateTime = `${year}-${month}-${day}T${timePart}`;
   
     setEditingId(row.id);
     setFormData({
@@ -203,8 +222,13 @@ export default function Pemasukan() {
       setLoading(true);
       await pemasukanService.deletePemasukan(id, 'pemasukan');
 
-      // Refresh data setelah menghapus
-      await fetchData();
+      // Jika menghapus item terakhir di halaman, kembali ke halaman sebelumnya
+      if (rows.length === 1 && page > 0) {
+        setPage(page - 1);
+      } else {
+        // Refresh data setelah menghapus
+        await fetchData();
+      }
 
       showAlertMessage(`Pemasukan dengan No ${id} berhasil dihapus`, 'success');
     } catch (error) {
@@ -226,12 +250,18 @@ export default function Pemasukan() {
     try {
       setLoading(true);
 
-      // Konversi format tanggal dari datetime-local (YYYY-MM-DDTHH:mm) ke YYYY-MM-DD HH:mm
+      // Konversi format tanggal dari datetime-local (YYYY-MM-DDTHH:mm) ke DD-MM-YYYY HH:mm
       const dateObj = new Date(formData.tanggal);
-      const formattedDate = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')} ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const year = dateObj.getFullYear();
+      const hours = String(dateObj.getHours()).padStart(2, '0');
+      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+      
+      const formattedDate = `${day}-${month}-${year} ${hours}:${minutes}`;
 
       const dataToSend = {
-        tanggal: formattedDate, // Format: "YYYY-MM-DD HH:mm"
+        tanggal: formattedDate, // Format: "DD-MM-YYYY HH:mm"
         nominal: parseFloat(formData.nominal),
         kategori: formData.kategori.trim(),
         keterangan: formData.keterangan.trim()
@@ -265,9 +295,9 @@ export default function Pemasukan() {
   }
 
   const formatDateTime = (backendDateString) => {
-    // Asumsi input: "2023-11-15 13:45"
+    // Asumsi input: "DD-MM-YYYY HH:mm"
     const [datePart, timePart] = backendDateString.split(' ');
-    const [year, month, day] = datePart.split('-');
+    const [day, month, year] = datePart.split('-');
     const [hours, minutes] = timePart.split(':');
     
     return new Date(year, month-1, day, hours, minutes).toLocaleString('id-ID', {
@@ -277,6 +307,17 @@ export default function Pemasukan() {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  // Handler untuk perubahan halaman
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  // Handler untuk perubahan jumlah baris per halaman
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0); // Reset ke halaman pertama ketika mengubah jumlah baris per halaman
   };
 
   const totalPemasukan = rows.reduce((sum, row) => sum + (row.nominal || 0), 0)
@@ -339,6 +380,7 @@ export default function Pemasukan() {
                 <TableRow>
                   <TableCell align='center'>No</TableCell>
                   <TableCell>Tanggal</TableCell>
+                  <TableCell>Kategori</TableCell>
                   <TableCell>Jumlah</TableCell>
                   <TableCell>Keterangan</TableCell>
                   <TableCell align="center">Aksi</TableCell>
@@ -347,13 +389,13 @@ export default function Pemasukan() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                    <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                       <CircularProgress />
                     </TableCell>
                   </TableRow>
                 ) : rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                    <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                       <AccountBalanceIcon sx={{ fontSize: 48, color: '#ccc', mb: 2 }} />
                       <Typography variant="body1" color="textSecondary">
                         Belum ada data pemasukan
@@ -373,8 +415,9 @@ export default function Pemasukan() {
                         }
                       }}
                     >
-                      <TableCell align='center'>{index + 1}</TableCell>
-                      <TableCell>{row.tanggal}</TableCell>
+                      <TableCell align='center'>{page * rowsPerPage + index + 1}</TableCell>
+                      <TableCell>{formatDateTime(row.tanggal)}</TableCell>
+                      <TableCell>{row.kategori}</TableCell>
                       <TableCell sx={{
                         color: '#2e7d32',
                         fontWeight: 600,
@@ -434,6 +477,23 @@ export default function Pemasukan() {
                 )}
               </TableBody>
             </Table>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={totalItems}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              labelRowsPerPage="Baris per halaman:"
+              labelDisplayedRows={({ from, to, count }) => `${from}-${to} dari ${count}`}
+              sx={{
+                borderTop: '1px solid rgba(224, 224, 224, 1)',
+                '& .MuiTablePagination-toolbar': {
+                  padding: '16px'
+                }
+              }}
+            />
           </Box>
         </CardContent>
       </StyledCard>

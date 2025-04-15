@@ -25,7 +25,8 @@ import {
   Alert,
   Fade,
   CircularProgress,
-  Avatar
+  Avatar,
+  TablePagination
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -117,20 +118,37 @@ export default function Pengeluaran() {
   const [alertType, setAlertType] = useState('success')
   const [loading, setLoading] = useState(true)
   const [previewUrl, setPreviewUrl] = useState('')
+  
+  // State untuk pagination
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [totalItems, setTotalItems] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [page, rowsPerPage]) // Tambahkan dependency page dan rowsPerPage
 
   const fetchData = async () => {
     try {
       setLoading(true)
-      const response = await pengeluaranService.getAllPengeluaran()
-      const pengeluaranData = response.filter(item => item.nominal > 0)
+      const response = await pengeluaranService.getAllPengeluaran(page + 1, rowsPerPage)
+
+      // Transform data dari API ke format yang diharapkan komponen
+      const pengeluaranData = response.data.items.map(item => ({
+        id: item.id_pengeluaran,
+        tanggal: item.tanggal,
+        nominal: item.nominal,
+        keterangan: item.keterangan,
+        nota: item.nota
+      }))
+      
       setRows(pengeluaranData)
+      setTotalItems(response.data.total_items)
+      setTotalPages(response.data.total_pages)
     } catch (error) {
       console.error('Error fetching data:', error)
-      showAlertMessage('Gagal mengambil data', 'error')
+      showAlertMessage('Gagal mengambil data: ' + error.message, 'error')
     } finally {
       setLoading(false)
     }
@@ -164,7 +182,7 @@ export default function Pengeluaran() {
         [name]: value
       }))
     }
-  }
+  };
 
   const handleAdd = () => {
     setEditingId(null)
@@ -212,8 +230,13 @@ export default function Pengeluaran() {
       setLoading(true);
       await pengeluaranService.deletePengeluaran(id, 'pengeluaran');
 
-      // Refresh data setelah menghapus
-      await fetchData();
+      // Jika menghapus item terakhir di halaman, kembali ke halaman sebelumnya
+      if (rows.length === 1 && page > 0) {
+        setPage(page - 1);
+      } else {
+        // Refresh data setelah menghapus
+        await fetchData();
+      }
 
       showAlertMessage(`Pengeluaran dengan No ${id} berhasil dihapus`, 'success');
     } catch (error) {
@@ -274,16 +297,31 @@ export default function Pengeluaran() {
   }
 
   const formatDateTime = (dateTimeString) => {
-    const date = new Date(dateTimeString);
-    return date.toLocaleString('id-ID', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
+    if (!dateTimeString) return '-'
+
+    try {
+      // Handle format "DD-MM-YYYY HH:mm" dari API
+      const [datePart, timePart] = dateTimeString.split(' ')
+      const [day, month, year] = datePart.split('-')
+      const [hours, minutes] = timePart.split(':')
+
+      return `${day}/${month}/${year} ${hours}:${minutes}`
+    } catch (e) {
+      console.error('Error formatting date:', e)
+      return dateTimeString
+    }
   }
+
+  // Handler untuk perubahan halaman
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  // Handler untuk perubahan jumlah baris per halaman
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0); // Reset ke halaman pertama ketika mengubah jumlah baris per halaman
+  };
 
   const totalPengeluaran = rows.reduce((sum, row) => sum + (row.nominal || 0), 0)
 
@@ -366,59 +404,38 @@ export default function Pengeluaran() {
                 ) : rows.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                      <AccountBalanceIcon sx={{ fontSize: 48, color: '#ccc', mb: 2 }} />
+                      <MoneyOffIcon sx={{ fontSize: 48, color: '#ccc', mb: 2 }} />
                       <Typography variant="body1" color="textSecondary">
-                        Belum ada data pengeluaran
+                        Tidak ada data pengeluaran
                       </Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
                   rows.map((row, index) => (
                     <TableRow
-                      key={`${row.tanggal}-${index}`}
+                      key={row.id} // Gunakan id sebagai key unik
                       sx={{
                         '&:hover': {
-                          bgcolor: '#f8f9fa',
-                          '& .action-buttons': {
-                            opacity: 1
-                          }
+                          backgroundColor: '#f5f5f5'
                         }
                       }}
                     >
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell>{row.tanggal}</TableCell>
-                      <TableCell sx={{
-                        color: '#d32f2f',
-                        fontWeight: 600,
-                        whiteSpace: 'nowrap'
-                      }}>
+                      <TableCell>{page * rowsPerPage + index + 1}</TableCell>
+                      <TableCell>{formatDateTime(row.tanggal)}</TableCell>
+                      <TableCell sx={{ color: '#d32f2f', fontWeight: 600 }}>
                         {formatCurrency(row.nominal)}
                       </TableCell>
-                      <TableCell sx={{
-                        maxWidth: { xs: '120px', sm: '200px' },
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {row.keterangan}
-                      </TableCell>
+                      <TableCell>{row.keterangan}</TableCell>
                       <TableCell>
                         {row.nota ? (
                           <IconButton
-                            size="small"
                             onClick={() => window.open(`${UPLOAD_URL}${row.nota}`, '_blank')}
-                            sx={{
-                              color: '#1a237e',
-                              width: { xs: '35px', sm: '30px' },
-                              height: { xs: '35px', sm: '30px' }
-                            }}
+                            size="small"
                           >
                             <ReceiptIcon />
                           </IconButton>
                         ) : (
-                          <Typography variant="caption" color="text.secondary">
-                            Tidak ada nota
-                          </Typography>
+                          <Typography variant="caption">Tidak ada</Typography>
                         )}
                       </TableCell>
                       <TableCell align="center">
@@ -465,6 +482,23 @@ export default function Pengeluaran() {
                 )}
               </TableBody>
             </Table>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={totalItems}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              labelRowsPerPage="Baris per halaman:"
+              labelDisplayedRows={({ from, to, count }) => `${from}-${to} dari ${count}`}
+              sx={{
+                borderTop: '1px solid rgba(224, 224, 224, 1)',
+                '& .MuiTablePagination-toolbar': {
+                  padding: '16px'
+                }
+              }}
+            />
           </Box>
         </CardContent>
       </StyledCard>

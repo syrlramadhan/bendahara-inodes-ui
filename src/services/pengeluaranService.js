@@ -192,14 +192,14 @@ export const pengeluaranService = {
      * Get all expenditure records
      * @returns {Promise<Array>} Array of expenditure records
      */
-    getAllPengeluaran: async () => {
+    getAllPengeluaran: async (page = 1, pageSize = 10) => {
         try {
             const token = Cookies.get('authToken');
             if (!token) {
                 throw new Error('Token tidak ditemukan');
             }
 
-            const response = await fetch('/api/pengeluaran/getall', {
+            const response = await fetch(`/api/pengeluaran/getall?page=${page}&page_size=${pageSize}`, {
                 method: 'GET',
                 headers: {
                     ...getHeaders(token),
@@ -213,8 +213,7 @@ export const pengeluaranService = {
                 throw new Error(errorData.message || 'Gagal mengambil data pengeluaran');
             }
 
-            const { data } = await response.json();
-            return data;
+            return await response.json(); // Kembalikan seluruh response termasuk metadata pagination
         } catch (error) {
             console.error('Error in getAllPengeluaran:', error);
             throw error;
