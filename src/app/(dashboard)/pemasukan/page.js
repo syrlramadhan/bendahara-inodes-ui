@@ -22,17 +22,20 @@ import {
   IconButton,
   Tooltip,
   Divider,
-  Alert,
-  Fade,
   CircularProgress,
   MenuItem,
-  TablePagination
+  TablePagination,
+  Snackbar,
+  Slide,
+  Alert
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
 import SaveIcon from '@mui/icons-material/Save'
+import CloseIcon from '@mui/icons-material/Close'
+import WarningIcon from '@mui/icons-material/Warning'
 import { styled } from '@mui/material/styles'
 import { pemasukanService } from '@/services/pemasukanService'
 import { laporanService } from '@/services/laporanService'
@@ -112,12 +115,18 @@ export default function Pemasukan() {
     keterangan: '',
     kategori: ''
   })
-  const [showAlert, setShowAlert] = useState(false)
-  const [alertMessage, setAlertMessage] = useState('')
-  const [alertType, setAlertType] = useState('success')
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  })
   const [loading, setLoading] = useState(true)
   const [totalPemasukan, setTotalPemasukan] = useState(0)
   const [isLoadingTotal, setIsLoadingTotal] = useState(true)
+  const [deleteDialog, setDeleteDialog] = useState({
+    open: false,
+    id: null
+  })
 
   // State untuk pagination
   const [page, setPage] = useState(0)
@@ -134,12 +143,11 @@ export default function Pemasukan() {
       try {
         setIsLoadingTotal(true)
         const total = await laporanService.getTotalPemasukan()
-        console.log('Fetched Total Pemasukan:', total)
         setTotalPemasukan(Number.isFinite(total) ? total : 0)
       } catch (error) {
         console.error('Gagal mengambil total pemasukan:', error)
         setTotalPemasukan(0)
-        showAlertMessage('Gagal memuat total pemasukan', 'error')
+        showSnackbar('Gagal memuat total pemasukan', 'error')
       } finally {
         setIsLoadingTotal(false)
       }
@@ -163,7 +171,7 @@ export default function Pemasukan() {
       setTotalPages(response.data.total_pages)
     } catch (error) {
       console.error('Error fetching data:', error)
-      showAlertMessage('Gagal mengambil data: ' + error.message, 'error')
+      showSnackbar('Gagal mengambil data: ' + error.message, 'error')
       setRows([])
     } finally {
       setLoading(false)
@@ -175,7 +183,7 @@ export default function Pemasukan() {
     if (name === 'nominal') {
       const numericValue = value.replace(/\D/g, '')
       if (numericValue.length > 11) {
-        showAlertMessage('Nominal terlalu besar (maksimal puluhan milyar)', 'error')
+        showSnackbar('Nominal terlalu besar (maksimal puluhan milyar)', 'error')
         return
       }
       setFormData(prev => ({
@@ -217,12 +225,14 @@ export default function Pemasukan() {
 
   const handleDelete = async (id) => {
     if (!id) {
-      showAlertMessage('Data tidak valid untuk dihapus', 'error')
+      showSnackbar('Data tidak valid untuk dihapus', 'error')
       return
     }
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus pemasukan dengan No ${id}?`)) {
-      return
-    }
+    setDeleteDialog({ open: true, id })
+  }
+
+  const confirmDelete = async () => {
+    const { id } = deleteDialog
     try {
       setLoading(true)
       await pemasukanService.deletePemasukan(id)
@@ -234,20 +244,29 @@ export default function Pemasukan() {
       // Refresh total pemasukan
       const total = await laporanService.getTotalPemasukan()
       setTotalPemasukan(Number.isFinite(total) ? total : 0)
-      showAlertMessage(`Pemasukan dengan No ${id} berhasil dihapus`, 'success')
+      showSnackbar(`Pemasukan berhasil dihapus`, 'success')
     } catch (error) {
       console.error('Error deleting data:', error)
-      showAlertMessage(`Gagal menghapus pemasukan: ${error.message}`, 'error')
+      showSnackbar(`Gagal menghapus pemasukan: ${error.message}`, 'error')
     } finally {
       setLoading(false)
+      setDeleteDialog({ open: false, id: null })
     }
   }
 
-  const showAlertMessage = (message, type) => {
-    setAlertMessage(message)
-    setAlertType(type)
-    setShowAlert(true)
-    setTimeout(() => setShowAlert(false), 3000)
+  const showSnackbar = (message, severity) => {
+    setSnackbar({
+      open: true,
+      message,
+      severity
+    })
+  }
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return
+    }
+    setSnackbar(prev => ({ ...prev, open: false }))
   }
 
   const handleSave = async () => {
@@ -279,7 +298,7 @@ export default function Pemasukan() {
       } else {
         result = await pemasukanService.addPemasukan(dataToSend)
       }
-      showAlertMessage(result.message, 'success')
+      showSnackbar(result.message, 'success')
       setShowModal(false)
       await fetchData()
       // Refresh total pemasukan
@@ -287,7 +306,7 @@ export default function Pemasukan() {
       setTotalPemasukan(Number.isFinite(total) ? total : 0)
     } catch (error) {
       console.error('Error saving data:', error)
-      showAlertMessage(error.message || 'Gagal menyimpan data', 'error')
+      showSnackbar(error.message || 'Gagal menyimpan data', 'error')
     } finally {
       setLoading(false)
     }
@@ -336,23 +355,38 @@ export default function Pemasukan() {
       padding: '24px',
       mt: { xs: '64px', sm: '80px' }
     }}>
-      <Fade in={showAlert}>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        TransitionComponent={Slide}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
         <Alert
-          severity={alertType}
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
           sx={{
-            position: 'fixed',
-            top: 24,
-            right: 24,
-            zIndex: 9999,
+            width: '100%',
+            borderRadius: '12px',
             boxShadow: '0 4px 20px 0 rgba(0,0,0,0.1)',
-            borderRadius: '12px'
+            fontWeight: 500
           }}
+          action={
+            <IconButton
+              size="small"
+              aria-label="close"
+              color="inherit"
+              onClick={handleCloseSnackbar}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          }
         >
-          {alertMessage}
+          {snackbar.message}
         </Alert>
-      </Fade>
+      </Snackbar>
 
-      <HeaderBox>
+      <HeaderBox sx={{ mb: 2 }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
             Data Pemasukan
@@ -507,6 +541,7 @@ export default function Pemasukan() {
         </CardContent>
       </StyledCard>
 
+      {/* Dialog untuk tambah/edit pemasukan */}
       <Dialog
         open={showModal}
         onClose={() => setShowModal(false)}
@@ -771,6 +806,102 @@ export default function Pemasukan() {
               <>
                 <SaveIcon />
                 Simpan
+              </>
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog untuk konfirmasi penghapusan */}
+      <Dialog
+        open={deleteDialog.open}
+        onClose={() => setDeleteDialog({ open: false, id: null })}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+            background: 'linear-gradient(to bottom, #ffffff, #f8f9fa)',
+            margin: '16px',
+            width: 'calc(100% - 32px)'
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          pb: 2,
+          pt: 3,
+          px: 3,
+          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+          background: 'linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%)',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1
+        }}>
+          <WarningIcon sx={{ fontSize: 28 }} />
+          Konfirmasi Penghapusan
+        </DialogTitle>
+        <DialogContent sx={{
+          py: 4,
+          px: { xs: 3, sm: 4 }
+        }}>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Apakah Anda yakin ingin menghapus pemasukan ini?
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Tindakan ini tidak dapat dibatalkan.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{
+          px: 4,
+          py: 3,
+          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+          gap: 2,
+          bgcolor: 'rgba(0, 0, 0, 0.02)'
+        }}>
+          <Button
+            onClick={() => setDeleteDialog({ open: false, id: null })}
+            variant="outlined"
+            sx={{
+              borderRadius: '10px',
+              borderColor: '#666',
+              color: '#666',
+              '&:hover': {
+                borderColor: '#d32f2f',
+                color: '#d32f2f',
+                bgcolor: 'rgba(211, 47, 47, 0.04)'
+              },
+              px: 3,
+              py: 1
+            }}
+          >
+            Batal
+          </Button>
+          <Button
+            onClick={confirmDelete}
+            variant="contained"
+            disabled={loading}
+            sx={{
+              borderRadius: '10px',
+              bgcolor: '#d32f2f',
+              '&:hover': {
+                bgcolor: '#b71c1c'
+              },
+              px: 3,
+              py: 1,
+              gap: 1
+            }}
+          >
+            {loading ? (
+              <>
+                <CircularProgress size={20} color="inherit" />
+                Menghapus...
+              </>
+            ) : (
+              <>
+                <DeleteIcon />
+                Hapus
               </>
             )}
           </Button>

@@ -64,21 +64,18 @@ export const pengeluaranService = {
                 credentials: 'include'
             });
 
-            // Handle non-JSON responses
-            const responseText = await response.text();
-            let responseData;
-
-            try {
-                responseData = JSON.parse(responseText);
-            } catch {
-                responseData = { message: responseText };
-            }
+            const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(responseData.message || 'Gagal menambah pengeluaran');
+                throw new Error(result.message || 'Gagal menambah pengeluaran');
             }
 
-            return responseData;
+            return {
+                success: true,
+                data: result.data,
+                message: 'Pengeluaran berhasil ditambahkan'
+            };
+
         } catch (error) {
             console.error('Error in addPengeluaran:', error);
             throw error;

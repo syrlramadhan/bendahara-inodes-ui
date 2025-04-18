@@ -50,7 +50,7 @@ export const pemasukanService = {
             return {
                 success: true,
                 data: result.data,
-                message: result.message || 'Pemasukan berhasil ditambahkan'
+                message: 'Pemasukan berhasil ditambahkan'
             };
         } catch (error) {
             console.error('Error in addPemasukan:', error);

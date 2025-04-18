@@ -36,7 +36,6 @@ import {
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
   AccountBalance as AccountBalanceIcon,
-  Delete as DeleteIcon
 } from '@mui/icons-material'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -284,25 +283,25 @@ export default function LaporanKeuangan() {
     startDate.setHours(0, 0, 0, 0)
     switch (range) {
       case 'today':
-        return { start: today, end: today }
+        return { start: formatDate(today), end: formatDate(today.setHours(24, 0, 0, 0)) }
       case 'yesterday':
         startDate.setDate(today.getDate() - 1)
-        return { start: startDate, end: startDate }
+        return { start: formatDate(startDate), end: formatDate(today) }
       case '7days':
         startDate.setDate(today.getDate() - 7)
-        return { start: startDate, end: today }
+        return { start: formatDate(startDate), end: formatDate(today) }
       case '1month':
         startDate.setMonth(today.getMonth() - 1)
-        return { start: startDate, end: today }
+        return { start: formatDate(startDate), end: formatDate(today) }
       case '3months':
         startDate.setMonth(today.getMonth() - 3)
-        return { start: startDate, end: today }
+        return { start: formatDate(startDate), end: formatDate(today) }
       case '6months':
         startDate.setMonth(today.getMonth() - 6)
-        return { start: startDate, end: today }
+        return { start: formatDate(startDate), end: formatDate(today) }
       case '1year':
         startDate.setFullYear(today.getFullYear() - 1)
-        return { start: startDate, end: today }
+        return { start: formatDate(startDate), end: formatDate(today) }
       case 'all':
       default:
         return { start: null, end: null }
@@ -313,6 +312,7 @@ export default function LaporanKeuangan() {
     try {
       setLoading(true)
       const { start, end } = getDateRange(range)
+      console.log(start, "-", end)
       let rangeData
       if (!start || !end) {
         rangeData = await laporanService.getAllLaporan()
@@ -363,45 +363,151 @@ export default function LaporanKeuangan() {
   const generatePDF = () => {
     try {
       const doc = new jsPDF('l', 'mm', 'a4')
-      doc.setFontSize(16)
-      doc.text('Laporan Keuangan Desa', 14, 15)
+      const pageWidth = doc.internal.pageSize.width
+      const pageHeight = doc.internal.pageSize.height
+      const margin = 15
+      let currentY = margin
+
+      // Set font
+      doc.setFont('helvetica', 'normal')
+
+      // Header
+      doc.setFontSize(20)
+      doc.setTextColor(25, 118, 210) // MUI primary color (#1976D2)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Laporan Keuangan Desa', pageWidth / 2, currentY, { align: 'center' })
+      currentY += 10
+
       doc.setFontSize(12)
+      doc.setTextColor(0, 0, 0)
+      doc.setFont('helvetica', 'normal')
+      doc.text('Desa Bontomanai, Kec. Rumbia, Kab. Jeneponto', pageWidth / 2, currentY, { align: 'center' })
+      currentY += 8
+
       const periodLabel = timeRangeOptions.find(opt => opt.value === timeRange)?.label || 'Semua'
-      doc.text(`Periode: ${periodLabel}`, 14, 25)
-      doc.text(`Total Pemasukan: ${formatRupiah(totalPemasukan)}`, 14, 35)
-      doc.text(`Total Pengeluaran: ${formatRupiah(totalPengeluaran)}`, 14, 42)
-      doc.text(`Saldo Akhir: ${formatRupiah(saldoAkhir)}`, 14, 49)
-      const tableData = filteredData.map(row => [
-        formatDateTime(row.tanggal),
-        row.keterangan,
-        formatRupiah(row.pemasukan || 0),
-        formatRupiah(row.pengeluaran || 0),
-        formatRupiah(row.total_saldo || 0)
-      ])
-      const tableColumns = ['Tanggal', 'Keterangan', 'Pemasukan', 'Pengeluaran', 'Saldo']
+      doc.text(`Periode: ${periodLabel}`, pageWidth / 2, currentY, { align: 'center' })
+      currentY += 10
+
+      // Garis pemisah
+      doc.setLineWidth(0.5)
+      doc.setDrawColor(200, 200, 200)
+      doc.line(margin, currentY, pageWidth - margin, currentY)
+      currentY += 10
+
+      // Ringkasan Keuangan
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Ringkasan Keuangan', margin, currentY)
+      currentY += 8
+
+      const summaryData = [
+        ['Total Pemasukan', formatRupiah(totalPemasukan)],
+        ['Total Pengeluaran', formatRupiah(totalPengeluaran)],
+        ['Saldo Akhir', formatRupiah(saldoAkhir)]
+      ]
+
       autoTable(doc, {
-        head: [tableColumns],
-        body: tableData,
-        startY: 60,
+        startY: currentY,
+        head: [['Kategori', 'Jumlah']],
+        body: summaryData,
         styles: {
+          font: 'helvetica',
           fontSize: 10,
-          cellPadding: 2
-        },
-        columnStyles: {
-          0: { cellWidth: 25 },
-          1: { cellWidth: 60 },
-          2: { cellWidth: 40, halign: 'right' },
-          3: { cellWidth: 40, halign: 'right' },
-          4: { cellWidth: 40, halign: 'right' }
+          cellPadding: 3,
+          overflow: 'linebreak'
         },
         headStyles: {
-          fillColor: [63, 81, 181],
-          textColor: 255,
-          fontSize: 10,
-          fontStyle: 'bold'
-        }
+          fillColor: [25, 118, 210], // MUI primary color
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          halign: 'center'
+        },
+        bodyStyles: {
+          textColor: [0, 0, 0],
+          halign: 'right',
+          valign: 'middle'
+        },
+        columnStyles: {
+          0: { halign: 'left', cellWidth: 100 },
+          1: { halign: 'right', cellWidth: pageWidth - 130 }
+        },
+        margin: { left: margin, right: margin },
+        theme: 'grid'
       })
-      doc.save('laporan-keuangan.pdf')
+
+      currentY = doc.lastAutoTable.finalY + 10
+
+      // Tabel Transaksi
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Detail Transaksi', margin, currentY)
+      currentY += 8
+
+      if (filteredData.length === 0) {
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'italic')
+        doc.setTextColor(100, 100, 100)
+        doc.text('Tidak ada transaksi untuk periode ini', margin, currentY)
+      } else {
+        const tableData = filteredData.map(row => [
+          formatDateTime(row.tanggal),
+          row.keterangan,
+          formatRupiah(row.pemasukan || 0),
+          formatRupiah(row.pengeluaran || 0),
+          formatRupiah(row.total_saldo || 0)
+        ])
+
+        const tableColumns = ['Tanggal', 'Keterangan', 'Pemasukan', 'Pengeluaran', 'Saldo']
+
+        autoTable(doc, {
+          startY: currentY,
+          head: [tableColumns],
+          body: tableData,
+          styles: {
+            font: 'helvetica',
+            fontSize: 9,
+            cellPadding: 3,
+            overflow: 'linebreak'
+          },
+          headStyles: {
+            fillColor: [25, 118, 210], // MUI primary color
+            textColor: [255, 255, 255],
+            fontStyle: 'bold',
+            halign: 'center'
+          },
+          bodyStyles: {
+            textColor: [0, 0, 0],
+            valign: 'middle'
+          },
+          alternateRowStyles: {
+            fillColor: [245, 245, 245]
+          },
+          columnStyles: {
+            0: { cellWidth: 50, halign: 'center' },
+            1: { cellWidth: 100, halign: 'left' },
+            2: { cellWidth: 40, halign: 'right' },
+            3: { cellWidth: 40, halign: 'right' },
+            4: { cellWidth: 40, halign: 'right' }
+          },
+          margin: { left: margin, right: margin },
+          theme: 'grid',
+          didDrawPage: (data) => {
+            // Footer
+            const pageCount = doc.internal.getNumberOfPages()
+            for (let i = 1; i <= pageCount; i++) {
+              doc.setPage(i)
+              const str = `Halaman ${i} dari ${pageCount}`
+              doc.setFontSize(8)
+              doc.setFont('helvetica', 'normal')
+              doc.setTextColor(100, 100, 100)
+              doc.text(str, pageWidth - margin, pageHeight - 10, { align: 'right' })
+              doc.text('Dibuat oleh Sistem Keuangan Desa', margin, pageHeight - 10)
+            }
+          }
+        })
+      }
+
+      doc.save('laporan-keuangan-desa.pdf')
       handleClose()
     } catch (error) {
       console.error('Error generating PDF:', error)
@@ -441,45 +547,6 @@ export default function LaporanKeuangan() {
         message: 'Terjadi kesalahan saat membuat Excel',
         severity: 'error'
       })
-    }
-  }
-
-  const handleDelete = async (id, jenis) => {
-    if (!id || !jenis) {
-      setAlert({
-        open: true,
-        message: 'Data tidak valid untuk dihapus',
-        severity: 'error'
-      })
-      return
-    }
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus ${jenis} ini?`)) {
-      return
-    }
-    try {
-      setLoading(true)
-      if (jenis === 'pemasukan') {
-        await pemasukanService.deletePemasukan(id)
-      } else if (jenis === 'pengeluaran') {
-        await pengeluaranService.deletePengeluaran(id)
-      } else {
-        throw new Error('Jenis transaksi tidak valid')
-      }
-      await fetchDataByRange(timeRange)
-      setAlert({
-        open: true,
-        message: 'Data berhasil dihapus',
-        severity: 'success'
-      })
-    } catch (error) {
-      console.error('Error deleting data:', error)
-      setAlert({
-        open: true,
-        message: `Gagal menghapus data: ${error.message}`,
-        severity: 'error'
-      })
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -723,7 +790,6 @@ export default function LaporanKeuangan() {
                       <TableCell>Keterangan</TableCell>
                       <TableCell align='right'>Nominal</TableCell>
                       <TableCell align='right'>Saldo</TableCell>
-                      <TableCell align='center'>Aksi</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -780,25 +846,6 @@ export default function LaporanKeuangan() {
                             whiteSpace: 'nowrap'
                           }}>
                             {formatRupiah(row.total_saldo)}
-                          </TableCell>
-                          <TableCell align='center' sx={{ whiteSpace: 'nowrap' }}>
-                            <IconButton
-                              onClick={() => handleDelete(
-                                row.id_pemasukan || row.id_pengeluaran,
-                                row.pemasukan > 0 ? 'pemasukan' : 'pengeluaran'
-                              )}
-                              color="error"
-                              sx={{
-                                opacity: 0.7,
-                                transition: 'opacity 0.2s',
-                                '&:hover': {
-                                  opacity: 1,
-                                  backgroundColor: 'rgba(211, 47, 47, 0.08)'
-                                }
-                              }}
-                            >
-                              <DeleteIcon />
-                            </IconButton>
                           </TableCell>
                         </TableRow>
                       ))
@@ -861,31 +908,6 @@ export default function LaporanKeuangan() {
                     <Typography variant="body1" sx={{ fontWeight: 600 }}>
                       {formatRupiah(row.total_saldo)}
                     </Typography>
-                  </Box>
-                  <Box sx={{
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    borderTop: '1px solid',
-                    borderColor: 'divider',
-                    pt: 2,
-                    mt: 2
-                  }}>
-                    <IconButton
-                      onClick={() => handleDelete(
-                        row.id_pemasukan || row.id_pengeluaran,
-                        row.pemasukan > 0 ? 'pemasukan' : 'pengeluaran'
-                      )}
-                      color="error"
-                      sx={{
-                        width: '40px',
-                        height: '40px',
-                        '&:hover': {
-                          bgcolor: 'error.lighter'
-                        }
-                      }}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
                   </Box>
                 </CardContent>
               </Card>

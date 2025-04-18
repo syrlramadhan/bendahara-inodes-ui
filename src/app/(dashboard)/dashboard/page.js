@@ -253,7 +253,7 @@ export default function Dashboard() {
           <CardHeader
             title={
               <Typography variant="h5" sx={{ fontWeight: 600, color: '#1a237e' }}>
-                History Transaksi
+                Riwayat Transaksi
               </Typography>
             }
             sx={{ borderBottom: '1px solid #eee', p: 3 }}

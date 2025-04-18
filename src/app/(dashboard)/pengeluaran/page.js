@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import { useState, useEffect } from 'react'
 import {
@@ -22,11 +22,11 @@ import {
   IconButton,
   Tooltip,
   Divider,
-  Alert,
-  Fade,
   CircularProgress,
-  Avatar,
-  TablePagination
+  TablePagination,
+  Snackbar,
+  Slide,
+  Alert
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -34,6 +34,8 @@ import AddIcon from '@mui/icons-material/Add'
 import MoneyOffIcon from '@mui/icons-material/MoneyOff'
 import ReceiptIcon from '@mui/icons-material/Receipt'
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
+import CloseIcon from '@mui/icons-material/Close'
+import WarningIcon from '@mui/icons-material/Warning'
 import { styled } from '@mui/material/styles'
 import { pengeluaranService } from '@/services/pengeluaranService'
 import { laporanService } from '@/services/laporanService'
@@ -114,13 +116,24 @@ export default function Pengeluaran() {
     keterangan: '',
     nota: null
   })
-  const [showAlert, setShowAlert] = useState(false)
-  const [alertMessage, setAlertMessage] = useState('')
-  const [alertType, setAlertType] = useState('success')
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  })
   const [loading, setLoading] = useState(true)
   const [previewUrl, setPreviewUrl] = useState('')
   const [totalPengeluaran, setTotalPengeluaran] = useState(0)
   const [isLoadingTotal, setIsLoadingTotal] = useState(true)
+  const [deleteDialog, setDeleteDialog] = useState({
+    open: false,
+    id: null
+  })
+  // State baru untuk dialog nota
+  const [notaDialog, setNotaDialog] = useState({
+    open: false,
+    imageUrl: ''
+  })
 
   // State untuk pagination
   const [page, setPage] = useState(0)
@@ -142,7 +155,7 @@ export default function Pengeluaran() {
       } catch (error) {
         console.error('Gagal mengambil total pengeluaran:', error)
         setTotalPengeluaran(0)
-        showAlertMessage('Gagal memuat total pengeluaran', 'error')
+        showSnackbar('Gagal memuat total pengeluaran', 'error')
       } finally {
         setIsLoadingTotal(false)
       }
@@ -175,7 +188,7 @@ export default function Pengeluaran() {
       setTotalPages(response.data.total_pages)
     } catch (error) {
       console.error('Error fetching data:', error)
-      showAlertMessage('Gagal mengambil data: ' + error.message, 'error')
+      showSnackbar('Gagal mengambil data: ' + error.message, 'error')
       setRows([])
     } finally {
       setLoading(false)
@@ -185,10 +198,14 @@ export default function Pengeluaran() {
   const handleInputChange = (e) => {
     const { name, value, files } = e.target
     if (name === 'nota') {
+      const file = files[0]
+      if (file && file.size > 5 * 1024 * 1024) {
+        showSnackbar('Ukuran file terlalu besar (maksimal 5MB)', 'error')
+        return
+      }
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl)
       }
-      const file = files[0]
       setFormData(prev => ({
         ...prev,
         [name]: file
@@ -202,7 +219,7 @@ export default function Pengeluaran() {
     } else if (name === 'nominal') {
       const numericValue = value.replace(/\D/g, '')
       if (numericValue.length > 11) {
-        showAlertMessage('Nominal terlalu besar (maksimal puluhan milyar)', 'error')
+        showSnackbar('Nominal terlalu besar (maksimal puluhan milyar)', 'error')
         return
       }
       setFormData(prev => ({
@@ -248,14 +265,16 @@ export default function Pengeluaran() {
     setShowModal(true)
   }
 
-  const handleDelete = async (id) => {
+  const handleDelete = (id) => {
     if (!id) {
-      showAlertMessage('Data tidak valid untuk dihapus', 'error')
+      showSnackbar('Data tidak valid untuk dihapus', 'error')
       return
     }
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus pengeluaran dengan No ${id}?`)) {
-      return
-    }
+    setDeleteDialog({ open: true, id })
+  }
+
+  const confirmDelete = async () => {
+    const { id } = deleteDialog
     try {
       setLoading(true)
       await pengeluaranService.deletePengeluaran(id)
@@ -267,20 +286,49 @@ export default function Pengeluaran() {
       // Refresh total pengeluaran
       const total = await laporanService.getTotalPengeluaran()
       setTotalPengeluaran(Number.isFinite(total) ? total : 0)
-      showAlertMessage(`Pengeluaran dengan No ${id} berhasil dihapus`, 'success')
+      showSnackbar(`Pengeluaran berhasil dihapus`, 'success')
     } catch (error) {
       console.error('Error deleting data:', error)
-      showAlertMessage(`Gagal menghapus pengeluaran: ${error.message}`, 'error')
+      showSnackbar(`Gagal menghapus pengeluaran: ${error.message}`, 'error')
     } finally {
       setLoading(false)
+      setDeleteDialog({ open: false, id: null })
     }
   }
 
-  const showAlertMessage = (message, type) => {
-    setAlertMessage(message)
-    setAlertType(type)
-    setShowAlert(true)
-    setTimeout(() => setShowAlert(false), 3000)
+  // Handler baru untuk menampilkan dialog nota
+  const handleShowNota = (notaPath) => {
+    if (notaPath) {
+      setNotaDialog({
+        open: true,
+        imageUrl: `${UPLOAD_URL}${notaPath}`
+      })
+    } else {
+      showSnackbar('Nota tidak tersedia', 'warning')
+    }
+  }
+
+  // Handler untuk menutup dialog nota
+  const handleCloseNotaDialog = () => {
+    setNotaDialog({
+      open: false,
+      imageUrl: ''
+    })
+  }
+
+  const showSnackbar = (message, severity) => {
+    setSnackbar({
+      open: true,
+      message,
+      severity
+    })
+  }
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return
+    }
+    setSnackbar(prev => ({ ...prev, open: false }))
   }
 
   const handleSave = async () => {
@@ -318,7 +366,7 @@ export default function Pengeluaran() {
         result = await pengeluaranService.addPengeluaran(dataToSend)
       }
 
-      showAlertMessage(result.message, 'success')
+      showSnackbar(result.message, 'success')
       setShowModal(false)
       await fetchData()
       // Refresh total pengeluaran
@@ -326,7 +374,7 @@ export default function Pengeluaran() {
       setTotalPengeluaran(Number.isFinite(total) ? total : 0)
     } catch (error) {
       console.error('Error saving data:', error)
-      showAlertMessage(error.message || 'Gagal menyimpan data', 'error')
+      showSnackbar(error.message || 'Gagal menyimpan data', 'error')
     } finally {
       setLoading(false)
     }
@@ -374,23 +422,38 @@ export default function Pengeluaran() {
       padding: '24px',
       mt: { xs: '64px', sm: '80px' }
     }}>
-      <Fade in={showAlert}>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        TransitionComponent={Slide}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
         <Alert
-          severity={alertType}
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
           sx={{
-            position: 'fixed',
-            top: 24,
-            right: 24,
-            zIndex: 9999,
+            width: '100%',
+            borderRadius: '12px',
             boxShadow: '0 4px 20px 0 rgba(0,0,0,0.1)',
-            borderRadius: '12px'
+            fontWeight: 500
           }}
+          action={
+            <IconButton
+              size="small"
+              aria-label="close"
+              color="inherit"
+              onClick={handleCloseSnackbar}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          }
         >
-          {alertMessage}
+          {snackbar.message}
         </Alert>
-      </Fade>
+      </Snackbar>
 
-      <HeaderBox>
+      <HeaderBox sx={{ mb: 2 }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
             Data Pengeluaran
@@ -468,8 +531,9 @@ export default function Pengeluaran() {
                       <TableCell>
                         {row.nota ? (
                           <IconButton
-                            onClick={() => window.open(`${UPLOAD_URL}${row.nota}`, '_blank')}
+                            onClick={() => handleShowNota(row.nota)}
                             size="small"
+                            aria-label={`Lihat nota pengeluaran nomor ${row.id}`}
                           >
                             <ReceiptIcon />
                           </IconButton>
@@ -492,6 +556,7 @@ export default function Pengeluaran() {
                             <IconButton
                               size="small"
                               onClick={() => handleEdit(row)}
+                              aria-label={`Edit pengeluaran nomor ${row.id}`}
                               sx={{
                                 color: '#1a237e',
                                 width: { xs: '35px', sm: '30px' },
@@ -505,6 +570,7 @@ export default function Pengeluaran() {
                             <IconButton
                               size="small"
                               onClick={() => handleDelete(row.id)}
+                              aria-label={`Hapus pengeluaran nomor ${row.id}`}
                               sx={{
                                 color: '#d32f2f',
                                 width: { xs: '35px', sm: '30px' },
@@ -557,8 +623,9 @@ export default function Pengeluaran() {
             width: 'calc(100% - 32px)'
           }
         }}
+        aria-labelledby="pengeluaran-dialog-title"
       >
-        <DialogTitle sx={{
+        <DialogTitle id="pengeluaran-dialog-title" sx={{
           pb: 2,
           pt: 3,
           px: 3,
@@ -837,6 +904,203 @@ export default function Pengeluaran() {
                 Simpan
               </>
             )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={deleteDialog.open}
+        onClose={() => setDeleteDialog({ open: false, id: null })}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+            background: 'linear-gradient(to bottom, #ffffff, #f8f9fa)',
+            margin: '16px',
+            width: 'calc(100% - 32px)'
+          }
+        }}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+      >
+        <DialogTitle id="delete-dialog-title" sx={{
+          pb: 2,
+          pt: 3,
+          px: 3,
+          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+          background: 'linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%)',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1
+        }}>
+          <WarningIcon sx={{ fontSize: 28 }} />
+          Konfirmasi Penghapusan
+        </DialogTitle>
+        <DialogContent id="delete-dialog-description" sx={{
+          py: 4,
+          px: { xs: 3, sm: 4 }
+        }}>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Apakah Anda yakin ingin menghapus pengeluaran ini?
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Tindakan ini tidak dapat dibatalkan.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{
+          px: 4,
+          py: 3,
+          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+          gap: 2,
+          bgcolor: 'rgba(0, 0, 0, 0.02)'
+        }}>
+          <Button
+            onClick={() => setDeleteDialog({ open: false, id: null })}
+            variant="outlined"
+            sx={{
+              borderRadius: '10px',
+              borderColor: '#666',
+              color: '#666',
+              '&:hover': {
+                borderColor: '#d32f2f',
+                color: '#d32f2f',
+                bgcolor: 'rgba(211, 47, 47, 0.04)'
+              },
+              px: 3,
+              py: 1
+            }}
+          >
+            Batal
+          </Button>
+          <Button
+            onClick={confirmDelete}
+            variant="contained"
+            disabled={loading}
+            sx={{
+              borderRadius: '10px',
+              bgcolor: '#d32f2f',
+              '&:hover': {
+                bgcolor: '#b71c1c'
+              },
+              px: 3,
+              py: 1,
+              gap: 1
+            }}
+          >
+            {loading ? (
+              <>
+                <CircularProgress size={20} color="inherit" />
+                Menghapus...
+              </>
+            ) : (
+              <>
+                <DeleteIcon />
+                Hapus
+              </>
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog baru untuk menampilkan nota */}
+      <Dialog
+        open={notaDialog.open}
+        onClose={handleCloseNotaDialog}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+            background: 'linear-gradient(to bottom, #ffffff, #f8f9fa)',
+            margin: '16px',
+            width: 'calc(100% - 32px)',
+            maxHeight: '90vh'
+          }
+        }}
+        aria-labelledby="nota-dialog-title"
+      >
+        <DialogTitle id="nota-dialog-title" sx={{
+          pb: 2,
+          pt: 3,
+          px: 3,
+          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+          background: 'linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1
+        }}>
+          <ReceiptIcon sx={{ fontSize: 28 }} />
+          Pratinjau Nota
+        </DialogTitle>
+        <DialogContent sx={{
+          py: 4,
+          px: { xs: 3, sm: 4 },
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          overflowY: 'auto',
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: '#f1f1f1',
+            borderRadius: '4px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#888',
+            borderRadius: '4px',
+            '&:hover': {
+              background: '#666',
+            },
+          },
+        }}>
+          {notaDialog.imageUrl ? (
+            <img
+              src={notaDialog.imageUrl}
+              alt="Nota Pengeluaran"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '70vh',
+                borderRadius: '8px',
+                objectFit: 'contain'
+              }}
+              onError={() => {
+                showSnackbar('Gagal memuat gambar nota', 'error')
+                handleCloseNotaDialog()
+              }}
+            />
+          ) : (
+            <Typography variant="body1" color="textSecondary">
+              Gambar nota tidak tersedia
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{
+          px: 4,
+          py: 3,
+          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+          gap: 2,
+          bgcolor: 'rgba(0, 0, 0, 0.02)'
+        }}>
+          <Button
+            onClick={handleCloseNotaDialog}
+            variant="contained"
+            sx={{
+              borderRadius: '10px',
+              bgcolor: '#1a237e',
+              '&:hover': {
+                bgcolor: '#0d47a1'
+              },
+              px: 3,
+              py: 1
+            }}
+          >
+            Tutup
           </Button>
         </DialogActions>
       </Dialog>

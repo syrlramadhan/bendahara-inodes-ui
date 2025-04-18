@@ -102,7 +102,7 @@ export default function DashboardLayout({ children }) {
                 lineHeight: '1.2'
               }}
             >
-              Desa Bonto Ujung
+              Desa Bontomanai
             </Typography>
             <Typography 
               variant="caption"
@@ -111,7 +111,7 @@ export default function DashboardLayout({ children }) {
                 display: 'block'
               }}
             >
-              Kec. Tarowang, Kab. Jeneponto
+              Kec. Rumbia, Kab. Jeneponto
             </Typography>
           </Box>
         </Box>
