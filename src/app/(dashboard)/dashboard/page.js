@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Typography, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, Button, Grid, CircularProgress } from '@mui/material'
+import { Box, Typography, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, Button, Grid, CircularProgress, Snackbar, Alert } from '@mui/material'
 import { createTheme, ThemeProvider, styled } from '@mui/material/styles'
 import { Card, CardHeader, CardBody } from '@/components/ui/card'
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
@@ -12,6 +12,8 @@ import { useState, useEffect } from 'react'
 import { laporanService } from '@/services/laporanService'
 import { transaksiService } from '@/services/transaksiService'
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
+import CloseIcon from '@mui/icons-material/Close'
+import Slide from '@mui/material/Slide'
 
 const theme = createTheme({
   typography: {
@@ -81,6 +83,12 @@ export default function Dashboard() {
   const [totalPengeluaran, setTotalPengeluaran] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  // State baru untuk Snackbar
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'error'
+  })
 
   useEffect(() => {
     const fetchData = async () => {
@@ -100,6 +108,8 @@ export default function Dashboard() {
 
           setTotalPemasukan(pemasukan)
           setTotalPengeluaran(pengeluaran)
+        } else {
+          showSnackbar('Data laporan keuangan tidak tersedia', 'warning')
         }
 
         // Fetch transaction history
@@ -108,12 +118,13 @@ export default function Dashboard() {
           setTransactions(transaksiData)
           setFilteredTransactions(transaksiData)
         } else {
-          console.error('Transaction data is not an array:', transaksiData)
+          showSnackbar('Format data transaksi tidak valid', 'error')
           setError('Format data transaksi tidak valid')
         }
       } catch (error) {
-        console.error('Error fetching data:', error)
-        setError(error.message || 'Gagal mengambil data')
+        const errorMessage = error.message || 'Gagal mengambil data';
+        showSnackbar(errorMessage, 'error')
+        setError(errorMessage)
       } finally {
         setLoading(false)
       }
@@ -153,9 +164,59 @@ export default function Dashboard() {
     setOpenBiodata(false)
   }
 
+  // Fungsi untuk menampilkan Snackbar
+  const showSnackbar = (message, severity) => {
+    setSnackbar({
+      open: true,
+      message,
+      severity
+    })
+  }
+
+  // Fungsi untuk menutup Snackbar
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return
+    }
+    setSnackbar(prev => ({ ...prev, open: false }))
+  }
+
   return (
     <ThemeProvider theme={theme}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, padding: { xs: '16px', sm: '24px', md: '32px' } }}>
+        {/* Snackbar untuk menampilkan pesan error atau informasi */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={3000}
+          onClose={handleCloseSnackbar}
+          TransitionComponent={Slide}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <Alert
+            onClose={handleCloseSnackbar}
+            severity={snackbar.severity}
+            sx={{
+              width: '100%',
+              borderRadius: '12px',
+              boxShadow: '0 4px 20px 0 rgba(0,0,0,0.1)',
+              fontWeight: 500,
+              bgcolor: snackbar.severity === 'error' ? '#ffebee' : snackbar.severity === 'warning' ? '#fff3e0' : '#e8f5e9'
+            }}
+            action={
+              <IconButton
+                size="small"
+                aria-label="close"
+                color="inherit"
+                onClick={handleCloseSnackbar}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            }
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+
         {/* Welcome Card + Stats Cards Container */}
         <Box sx={{
           display: 'flex',
@@ -190,7 +251,7 @@ export default function Dashboard() {
                   fontWeight: 700,
                   mt: 1
                 }}>
-                  {formatCurrency(totalSaldo)}
+                  {loading ? 'Memuat...' : formatCurrency(totalSaldo)}
                 </Typography>
               </Box>
             </ContentWrapper>
@@ -217,7 +278,7 @@ export default function Dashboard() {
                     Total Pemasukan
                   </Typography>
                   <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                    {formatCurrency(totalPemasukan)}
+                    {loading ? 'Memuat...' : formatCurrency(totalPemasukan)}
                   </Typography>
                 </ContentWrapper>
                 <IconWrapper>
@@ -237,7 +298,7 @@ export default function Dashboard() {
                     Total Pengeluaran
                   </Typography>
                   <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                    {formatCurrency(totalPengeluaran)}
+                    {loading ? 'Memuat...' : formatCurrency(totalPengeluaran)}
                   </Typography>
                 </ContentWrapper>
                 <IconWrapper>
@@ -253,7 +314,7 @@ export default function Dashboard() {
           <CardHeader
             title={
               <Typography variant="h5" sx={{ fontWeight: 600, color: '#1a237e' }}>
-                Riwayat Transaksi
+                Transaksi Terakhir
               </Typography>
             }
             sx={{ borderBottom: '1px solid #eee', p: 3 }}

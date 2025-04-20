@@ -72,7 +72,7 @@ export default function DashboardLayout({ children }) {
   const handleLogout = () => {
     Cookies.remove('isAuthenticated')
     localStorage.removeItem('user')
-    router.push('/authentication/sign-in')
+    router.push('http://localhost:5000')
   }
 
   const drawer = (

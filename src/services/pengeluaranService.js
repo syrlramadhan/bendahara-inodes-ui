@@ -1,6 +1,20 @@
 import { getHeaders } from '@/config/api';
 import Cookies from 'js-cookie';
 
+// Fungsi untuk memformat tanggal dari YYYY-MM-DDTHH:mm ke YYYY-MM-DD HH:mm
+const formatDateForBackend = (dateString) => {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+        throw new Error('Format tanggal tidak valid');
+    }
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
+};
+
 export const pengeluaranService = {
     /**
      * Add new expenditure record
@@ -13,18 +27,6 @@ export const pengeluaranService = {
             // if (!token) {
             //     throw new Error('Token tidak ditemukan');
             // }
-
-            // Convert date from datetime-local to backend format (YYYY-MM-DD HH:mm)
-            const formatDateForBackend = (dateString) => {
-                const date = new Date(dateString);
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                const hours = String(date.getHours()).padStart(2, '0');
-                const minutes = String(date.getMinutes()).padStart(2, '0');
-
-                return `${year}-${month}-${day} ${hours}:${minutes}`;
-            };
 
             // Validation
             if (!data.tanggal || isNaN(Date.parse(data.tanggal))) {
@@ -75,7 +77,6 @@ export const pengeluaranService = {
                 data: result.data,
                 message: 'Pengeluaran berhasil ditambahkan'
             };
-
         } catch (error) {
             console.error('Error in addPengeluaran:', error);
             throw error;
@@ -116,8 +117,9 @@ export const pengeluaranService = {
                 throw new Error('Keterangan tidak boleh kosong');
             }
 
+            // Prepare FormData with properly formatted date
             const formData = new FormData();
-            formData.append('tanggal', data.tanggal);
+            formData.append('tanggal', formatDateForBackend(data.tanggal)); // Formatted date
             formData.append('nominal', nominal);
             formData.append('keterangan', data.keterangan.trim());
 
@@ -141,7 +143,11 @@ export const pengeluaranService = {
                 throw new Error(responseData.message || 'Gagal mengupdate pengeluaran');
             }
 
-            return responseData;
+            return {
+                success: true,
+                data: responseData.data,
+                message: 'Pengeluaran berhasil diupdate'
+            };
         } catch (error) {
             console.error('Error in updatePengeluaran:', error);
             throw error;

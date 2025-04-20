@@ -1,6 +1,21 @@
 import { getHeaders } from '@/config/api';
 import Cookies from 'js-cookie';
 
+// Fungsi untuk memformat tanggal dari datetime-local ke format backend
+const formatDateForBackend = (dateString) => {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+        throw new Error('Format tanggal tidak valid');
+    }
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
+};
+
 export const pemasukanService = {
     /**
      * Add new income record
@@ -11,18 +26,6 @@ export const pemasukanService = {
         try {
             // const token = Cookies.get('authToken');
             // if (!token) throw new Error('Token tidak ditemukan');
-
-            // Convert date from datetime-local (YYYY-MM-DDTHH:mm) to backend format (YYYY-MM-DD HH:mm)
-            const formatDateForBackend = (dateString) => {
-                const date = new Date(dateString);
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                const hours = String(date.getHours()).padStart(2, '0');
-                const minutes = String(date.getMinutes()).padStart(2, '0');
-
-                return `${year}-${month}-${day} ${hours}:${minutes}`;
-            };
 
             // Prepare payload with properly formatted date
             const payload = {
@@ -70,7 +73,7 @@ export const pemasukanService = {
             // if (!token) throw new Error('Token tidak ditemukan');
 
             const payload = {
-                tanggal: new Date(data.tanggal).toISOString(),
+                tanggal: formatDateForBackend(data.tanggal), // Gunakan format yang sama dengan addPemasukan
                 nominal: Number(data.nominal.toString().replace(/\D/g, '')),
                 kategori: data.kategori.trim(),
                 keterangan: data.keterangan.trim()

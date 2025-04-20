@@ -129,13 +129,10 @@ export default function Pengeluaran() {
     open: false,
     id: null
   })
-  // State baru untuk dialog nota
   const [notaDialog, setNotaDialog] = useState({
     open: false,
     imageUrl: ''
   })
-
-  // State untuk pagination
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [totalItems, setTotalItems] = useState(0)
@@ -163,7 +160,6 @@ export default function Pengeluaran() {
     fetchTotal()
   }, [])
 
-  // Cleanup previewUrl untuk mencegah memory leak
   useEffect(() => {
     return () => {
       if (previewUrl) {
@@ -247,9 +243,11 @@ export default function Pengeluaran() {
   }
 
   const handleEdit = (row) => {
+    // Parse backend date format (DD-MM-YYYY HH:mm) to datetime-local format (YYYY-MM-DDTHH:mm)
     const [datePart, timePart] = row.tanggal.split(' ')
-    const [year, month, day] = datePart.split('-')
+    const [day, month, year] = datePart.split('-')
     const localDateTime = `${year}-${month}-${day}T${timePart}`
+    
     setEditingId(row.id)
     setFormData({
       tanggal: localDateTime,
@@ -283,7 +281,6 @@ export default function Pengeluaran() {
       } else {
         await fetchData()
       }
-      // Refresh total pengeluaran
       const total = await laporanService.getTotalPengeluaran()
       setTotalPengeluaran(Number.isFinite(total) ? total : 0)
       showSnackbar(`Pengeluaran berhasil dihapus`, 'success')
@@ -296,7 +293,6 @@ export default function Pengeluaran() {
     }
   }
 
-  // Handler baru untuk menampilkan dialog nota
   const handleShowNota = (notaPath) => {
     if (notaPath) {
       setNotaDialog({
@@ -308,7 +304,6 @@ export default function Pengeluaran() {
     }
   }
 
-  // Handler untuk menutup dialog nota
   const handleCloseNotaDialog = () => {
     setNotaDialog({
       open: false,
@@ -334,7 +329,6 @@ export default function Pengeluaran() {
   const handleSave = async () => {
     try {
       setLoading(true)
-      // Validasi input
       if (!formData.tanggal) throw new Error('Tanggal harus diisi')
       if (!formData.nominal) throw new Error('Nominal harus diisi')
       if (!formData.keterangan) throw new Error('Keterangan harus diisi')
@@ -359,7 +353,6 @@ export default function Pengeluaran() {
 
       let result
       if (editingId) {
-        // Tidak kirim nota saat update kecuali ada file baru
         const { nota, ...updateData } = dataToSend
         result = await pengeluaranService.updatePengeluaran(editingId, formData.nota ? dataToSend : updateData)
       } else {
@@ -369,7 +362,6 @@ export default function Pengeluaran() {
       showSnackbar(result.message, 'success')
       setShowModal(false)
       await fetchData()
-      // Refresh total pengeluaran
       const total = await laporanService.getTotalPengeluaran()
       setTotalPengeluaran(Number.isFinite(total) ? total : 0)
     } catch (error) {
@@ -394,7 +386,7 @@ export default function Pengeluaran() {
     if (!dateTimeString) return '-'
     try {
       const [datePart, timePart] = dateTimeString.split(' ')
-      const [year, month, day] = datePart.split('-')
+      const [day, month, year] = datePart.split('-')
       const [hours, minutes] = timePart.split(':')
       return `${day}/${month}/${year} ${hours}:${minutes}`
     } catch (e) {
@@ -1005,7 +997,6 @@ export default function Pengeluaran() {
         </DialogActions>
       </Dialog>
 
-      {/* Dialog baru untuk menampilkan nota */}
       <Dialog
         open={notaDialog.open}
         onClose={handleCloseNotaDialog}
