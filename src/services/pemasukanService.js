@@ -146,7 +146,7 @@ export const pemasukanService = {
      * Get all income records
      * @returns {Promise<Array>} Array of income records
      */
-    getAllPemasukan: async (page = 1, pageSize = 10) => {
+    getAllPemasukan: async (page, pageSize) => {
         try {
             // const token = Cookies.get('authToken');
             // if (!token) {

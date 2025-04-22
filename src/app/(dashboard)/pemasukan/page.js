@@ -27,7 +27,10 @@ import {
   TablePagination,
   Snackbar,
   Slide,
-  Alert
+  Alert,
+  FormControl,
+  InputLabel,
+  Select
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -54,9 +57,6 @@ const HeaderBox = styled(Box)(({ theme }) => ({
   color: 'white',
   borderRadius: '16px',
   marginBottom: { xs: '8px', sm: '24px' },
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '16px',
   boxShadow: '0 4px 20px 0 rgba(0,0,0,0.1)'
 }))
 
@@ -66,14 +66,20 @@ const AddButton = styled(Button)(({ theme }) => ({
   borderRadius: '12px',
   textTransform: 'none',
   fontWeight: 600,
-  padding: '12px',
+  padding: '12px 24px',
   width: '100%',
   fontSize: '1rem',
   marginBottom: '16px',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
   '&:hover': {
     backgroundColor: 'rgba(255,255,255,0.9)',
-    boxShadow: '0 8px 16px 0 rgba(0,0,0,0.1)'
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    transform: 'translateY(-1px)'
   },
+  '&:active': {
+    transform: 'translateY(0)'
+  },
+  transition: 'all 0.2s ease',
   [theme.breakpoints.up('sm')]: {
     display: 'none'
   }
@@ -86,10 +92,18 @@ const DesktopAddButton = styled(Button)(({ theme }) => ({
   textTransform: 'none',
   fontWeight: 600,
   padding: '12px 24px',
+  width: '100%',
+  fontSize: '1rem',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
   '&:hover': {
     backgroundColor: 'rgba(255,255,255,0.9)',
-    boxShadow: '0 8px 16px 0 rgba(0,0,0,0.1)'
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    transform: 'translateY(-1px)'
   },
+  '&:active': {
+    transform: 'translateY(0)'
+  },
+  transition: 'all 0.2s ease',
   [theme.breakpoints.down('sm')]: {
     display: 'none'
   }
@@ -101,6 +115,45 @@ const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
   '& .MuiTableCell-head': {
     backgroundColor: '#f8f9fa',
     fontWeight: 600,
+    color: '#2e7d32'
+  }
+}))
+
+const StyledFormControl = styled(FormControl)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: '10px',
+    backgroundColor: '#ffffff',
+    fontSize: '0.9rem',
+    padding: '4px 8px',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+    '& .MuiSelect-select': {
+      padding: '8px 12px',
+      paddingRight: '32px !important'
+    },
+    '&:hover .MuiOutlinedInput-notchedOutline': {
+      borderColor: '#2e7d32',
+      boxShadow: '0 0 0 3px rgba(46,125,50,0.1)'
+    },
+    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+      borderColor: '#2e7d32',
+      borderWidth: '2px',
+      boxShadow: '0 0 0 3px rgba(46,125,50,0.1)'
+    },
+    transition: 'all 0.2s ease'
+  },
+  '& .MuiInputLabel-root': {
+    fontSize: '0.9rem',
+    color: '#666',
+    transform: 'translate(14px, 10px) scale(1)',
+    '&.MuiInputLabel-shrink': {
+      transform: 'translate(14px, -6px) scale(0.75)',
+      color: '#2e7d32'
+    },
+    '&.Mui-focused': {
+      color: '#2e7d32'
+    }
+  },
+  '& .MuiSvgIcon-root': {
     color: '#2e7d32'
   }
 }))
@@ -127,22 +180,79 @@ export default function Pemasukan() {
     open: false,
     id: null
   })
-
-  // State untuk pagination
+  const [timeRange, setTimeRange] = useState('all')
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [totalItems, setTotalItems] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
 
+  const timeRangeOptions = [
+    { value: 'today', label: 'Hari Ini' },
+    { value: 'yesterday', label: 'Kemarin' },
+    { value: '7days', label: '7 Hari Terakhir' },
+    { value: '1month', label: '1 Bulan Terakhir' },
+    { value: '3months', label: '3 Bulan Terakhir' },
+    { value: '6months', label: '6 Bulan Terakhir' },
+    { value: '1year', label: '1 Tahun Terakhir' },
+    { value: 'all', label: 'Semua' }
+  ]
+
+  const formatDate = (date) => {
+    if (!date) return null
+    const d = new Date(date)
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const getDateRange = (range) => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const startDate = new Date()
+    startDate.setHours(0, 0, 0, 0)
+    switch (range) {
+      case 'today':
+        return { start: formatDate(today), end: formatDate(today.setHours(24, 0, 0, 0)) }
+      case 'yesterday':
+        startDate.setDate(today.getDate() - 1)
+        return { start: formatDate(startDate), end: formatDate(today) }
+      case '7days':
+        startDate.setDate(today.getDate() - 7)
+        return { start: formatDate(startDate), end: formatDate(today) }
+      case '1month':
+        startDate.setMonth(today.getMonth() - 1)
+        return { start: formatDate(startDate), end: formatDate(today) }
+      case '3months':
+        startDate.setMonth(today.getMonth() - 3)
+        return { start: formatDate(startDate), end: formatDate(today) }
+      case '6months':
+        startDate.setMonth(today.getMonth() - 6)
+        return { start: formatDate(startDate), end: formatDate(today) }
+      case '1year':
+        startDate.setFullYear(today.getFullYear() - 1)
+        return { start: formatDate(startDate), end: formatDate(today) }
+      case 'all':
+      default:
+        return { start: null, end: null }
+    }
+  }
+
   useEffect(() => {
     fetchData()
-  }, [page, rowsPerPage])
+  }, [page, rowsPerPage, timeRange])
 
   useEffect(() => {
     const fetchTotal = async () => {
       try {
         setIsLoadingTotal(true)
-        const total = await laporanService.getTotalPemasukan()
+        const { start, end } = getDateRange(timeRange)
+        let total
+        if (!start || !end) {
+          total = await laporanService.getTotalPemasukan()
+        } else {
+          total = await laporanService.getTotalPemasukanByDateRange(start, end)
+        }
         setTotalPemasukan(Number.isFinite(total) ? total : 0)
       } catch (error) {
         console.error('Gagal mengambil total pemasukan:', error)
@@ -153,12 +263,18 @@ export default function Pemasukan() {
       }
     }
     fetchTotal()
-  }, [])
+  }, [timeRange])
 
   const fetchData = async () => {
     try {
       setLoading(true)
-      const response = await pemasukanService.getAllPemasukan(page + 1, rowsPerPage)
+      const { start, end } = getDateRange(timeRange)
+      let response
+      if (!start || !end) {
+        response = await pemasukanService.getAllPemasukan(page + 1, rowsPerPage)
+      } else {
+        response = await pemasukanService.getPemasukanByDateRange(start, end, page + 1, rowsPerPage)
+      }
       const pemasukanData = response.data.items.map(item => ({
         id: item.id_pemasukan,
         tanggal: item.tanggal,
@@ -241,8 +357,10 @@ export default function Pemasukan() {
       } else {
         await fetchData()
       }
-      // Refresh total pemasukan
-      const total = await laporanService.getTotalPemasukan()
+      const { start, end } = getDateRange(timeRange)
+      const total = !start || !end
+        ? await laporanService.getTotalPemasukan()
+        : await laporanService.getTotalPemasukanByDateRange(start, end)
       setTotalPemasukan(Number.isFinite(total) ? total : 0)
       showSnackbar(`Pemasukan berhasil dihapus`, 'success')
     } catch (error) {
@@ -272,7 +390,6 @@ export default function Pemasukan() {
   const handleSave = async () => {
     try {
       setLoading(true)
-      // Validasi input
       if (!formData.tanggal) throw new Error('Tanggal harus diisi')
       if (!formData.nominal) throw new Error('Nominal harus diisi')
       if (!formData.kategori) throw new Error('Kategori harus diisi')
@@ -301,8 +418,10 @@ export default function Pemasukan() {
       showSnackbar(result.message, 'success')
       setShowModal(false)
       await fetchData()
-      // Refresh total pemasukan
-      const total = await laporanService.getTotalPemasukan()
+      const { start, end } = getDateRange(timeRange)
+      const total = !start || !end
+        ? await laporanService.getTotalPemasukan()
+        : await laporanService.getTotalPemasukanByDateRange(start, end)
       setTotalPemasukan(Number.isFinite(total) ? total : 0)
     } catch (error) {
       console.error('Error saving data:', error)
@@ -399,6 +518,7 @@ export default function Pemasukan() {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={handleAdd}
+          sx={{ mt: 2 }}
         >
           Tambah Pemasukan
         </DesktopAddButton>
@@ -414,9 +534,39 @@ export default function Pemasukan() {
 
       <StyledCard>
         <CardContent>
-          <Typography variant="h6" component="div" sx={{ mb: 3, color: '#2e7d32' }}>
-            Kelola data pemasukan desa dengan mudah
-          </Typography>
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 2, sm: 0 },
+            mb: 3
+          }}>
+            <Typography variant="h6" component="div" sx={{ color: '#2e7d32' }}>
+              Kelola data pemasukan desa dengan mudah
+            </Typography>
+            <StyledFormControl
+              variant="outlined"
+              size="small"
+              sx={{
+                minWidth: { xs: '100%', sm: '180px' },
+                maxWidth: { xs: '600px', sm: '180px' }
+              }}
+            >
+              <InputLabel>Filter Periode</InputLabel>
+              <Select
+                value={timeRange}
+                onChange={(e) => setTimeRange(e.target.value)}
+                label="Filter Periode"
+              >
+                {timeRangeOptions.map(option => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </StyledFormControl>
+          </Box>
           <Box sx={{ overflowX: 'auto', width: '100%' }}>
             <Table sx={{ minWidth: 650 }}>
               <TableHead>

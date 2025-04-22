@@ -13,6 +13,7 @@ const inter = Inter({ subsets: ['latin'] })
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <title>Sistem Bendahara Desa</title>
       <body className={inter.className}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
